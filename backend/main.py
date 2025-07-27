@@ -17,17 +17,25 @@ from mock_data import (
     MOCK_LEDGER_DATA,
     MOCK_USERS
 )
+from jose import jwt, JWTError
+import requests
+from fastapi import Response, Cookie
+from datetime import timedelta
 
 load_dotenv()
 
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
 
-origins = [
-    "https://bravocui.github.io",
-    "http://localhost:3000", # For local development
-]
-
 # CORS middleware
+origins = os.getenv("ALLOWED_ORIGINS")
+if origins:
+    origins = [o.strip() for o in origins.split(",") if o.strip()]
+else:
+    origins = [
+        "https://bravocui.github.io",
+        "http://localhost:3000", # For local development
+    ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -86,37 +94,81 @@ mock_fitness_data = {}
 mock_travel_data = {}
 mock_ledger_data = {}
 
-# Authentication helper
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
-    # In a real app, you would verify the JWT token here
-    # For now, we'll use a simple mock authentication
-    token = credentials.credentials
-    if token not in mock_users:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials"
-        )
-    return mock_users[token]
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
+JWT_ALGORITHM = "HS256"
+JWT_COOKIE_NAME = "session_token"
+JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
+
+# Helper to verify Google ID token
+async def verify_google_token(id_token: str):
+    # For demo tokens, skip verification
+    if id_token.startswith('demo-token-'):
+        return MOCK_USERS["demo-token"]
+    # Real Google token verification
+    try:
+        # Get Google's public keys
+        resp = requests.get('https://www.googleapis.com/oauth2/v3/certs')
+        jwks = resp.json()
+        # Decode and verify
+        unverified_header = jwt.get_unverified_header(id_token)
+        key = next((k for k in jwks['keys'] if k['kid'] == unverified_header['kid']), None)
+        if not key:
+            raise HTTPException(status_code=401, detail="Invalid Google token (no key)")
+        public_key = jwt.construct_rsa_public_key(key)
+        payload = jwt.decode(id_token, public_key, algorithms=['RS256'], audience=GOOGLE_CLIENT_ID)
+        # Extract user info
+        return {
+            "email": payload["email"],
+            "name": payload.get("name", payload["email"]),
+            "picture": payload.get("picture")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google token: {e}")
+
+# Issue JWT
+from datetime import datetime, timedelta
+
+def create_jwt(user: dict):
+    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    to_encode = {"sub": user["email"], "exp": expire, "user": user}
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+# Auth dependency: read JWT from cookie
+async def get_current_user(session_token: str = Cookie(None)) -> User:
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Not authenticated (no cookie)")
+    try:
+        payload = jwt.decode(session_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = payload["user"]
+        return User(**user)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
 
 @app.post("/auth/google")
-async def google_auth(token: dict):
-    """Mock Google authentication endpoint"""
-    # Extract token from request body
+async def google_auth(token: dict, response: Response):
     token_value = token.get("token", "")
-    print(f"Received token: {token_value}")  # Debug log
-
-    # In a real app, you would verify the Google token here
-    # For demo login, create a mock user for Bravo C
+    # Demo login
     if token_value.startswith('demo-token-'):
-        print("Creating demo user for Bravo C")  # Debug log
-        mock_user = User(**MOCK_USERS["demo-token"])
+        user = MOCK_USERS["demo-token"]
     else:
-        print("Creating default user")  # Debug log
-        # Default mock user for other cases
-        mock_user = User(**MOCK_USERS["default-token"])
-    
-    mock_users[token_value] = mock_user
-    return {"access_token": token_value, "user": mock_user}
+        user = await verify_google_token(token_value)
+    jwt_token = create_jwt(user)
+    # Set secure, HTTP-only cookie
+    response.set_cookie(
+        key=JWT_COOKIE_NAME,
+        value=jwt_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=JWT_EXPIRE_MINUTES*60
+    )
+    return {"user": user}
+
+@app.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(JWT_COOKIE_NAME)
+    return {"message": "Logged out"}
 
 @app.get("/user/profile")
 async def get_user_profile(current_user: User = Depends(get_current_user)):
