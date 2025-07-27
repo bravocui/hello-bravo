@@ -100,9 +100,9 @@ mock_ledger_data = {}
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
-JWT_ALGORITHM = "HS256"
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_COOKIE_NAME = "session_token"
-JWT_EXPIRE_MINUTES = 60 * 24 * 7  # 1 week
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # Default: 1 week (60 * 24 * 7)
 
 # Helper to verify Google ID token
 async def verify_google_token(id_token: str):

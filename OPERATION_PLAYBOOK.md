@@ -31,12 +31,15 @@ npm install
 # 3. Build for production
 npm run build
 
-# 4. Commit and push changes
+# 4. Deploy to production
+npm run deploy
+
+# 5. Commit and push changes
 git add .
 git commit -m "Update frontend: [describe changes]"
 git push origin main
 
-# 5. Verify deployment
+# 6. Verify deployment
 # Wait 2-3 minutes, then check: https://bravocui.github.io/hello-bravo/
 ```
 
@@ -62,9 +65,12 @@ git push origin main
 
 ### Environment Variables (Google Cloud Run)
 ```bash
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-JWT_SECRET=your-secure-jwt-secret
-ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
+Update backend/.env file
+
+- GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+- JWT_SECRET=your-secure-jwt-secret
+- ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
+
 ```
 
 ### Deployment Steps
@@ -73,32 +79,15 @@ ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
 # 1. Navigate to backend directory
 cd backend
 
-# 2. Build and deploy to Google Cloud Run
-gcloud run deploy hello-bravo-api \
-  --source . \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars="GOOGLE_CLIENT_ID=your-client-id,JWT_SECRET=your-secret,ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000"
-
-# 3. Verify deployment
-curl https://hello-bravo-api-772654378329.us-central1.run.app/health
-```
-
-### Alternative: Using Dockerfile
-```bash
-# 1. Build Docker image
-docker build -t hello-bravo-api .
-
-# 2. Tag for Google Container Registry
-docker tag hello-bravo-api gcr.io/your-project/hello-bravo-api
+# 2. Build Docker image and tag
+docker build --platform linux/amd64 -t gcr.io/bravocui-site/hello-bravo-api .
 
 # 3. Push to registry
-docker push gcr.io/your-project/hello-bravo-api
+docker push gcr.io/bravocui-site/hello-bravo-api
 
 # 4. Deploy to Cloud Run
 gcloud run deploy hello-bravo-api \
-  --image gcr.io/your-project/hello-bravo-api \
+  --image gcr.io/bravocui-site/hello-bravo-api \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated
