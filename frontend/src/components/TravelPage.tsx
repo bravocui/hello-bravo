@@ -214,7 +214,7 @@ const TravelPage: React.FC = () => {
                       <div key={index} className="aspect-video rounded-lg overflow-hidden">
                         <img
                           src={photo}
-                          alt={`${trip.destination} photo ${index + 1}`}
+                          alt={`${trip.destination} ${index + 1}`}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                         />
                       </div>

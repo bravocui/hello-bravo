@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, ArrowLeft, Plus, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
+import { DollarSign, ArrowLeft, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import axios from 'axios';
 
@@ -140,14 +140,7 @@ const AccountingPage: React.FC = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const monthlyTotals = filteredData.reduce((acc, entry) => {
-    const key = `${entry.year}-${entry.month}`;
-    if (!acc[key]) {
-      acc[key] = 0;
-    }
-    acc[key] += entry.amount;
-    return acc;
-  }, {} as Record<string, number>);
+
 
   // Create histogram data for categories
   const createHistogramData = (category: string) => {
@@ -541,7 +534,7 @@ const AccountingPage: React.FC = () => {
 
               const CustomXAxisTick = (props: any) => {
                 const { x, y, payload } = props;
-                const { value, index } = payload;
+                const { index } = payload;
                 
                 const entry = chartData[index];
                 if (!entry) return null;
