@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/hello-bravo/static/css/main.6b510502.css",
-    "main.js": "/hello-bravo/static/js/main.e77491ce.js",
+    "main.js": "/hello-bravo/static/js/main.fb6ed8f5.js",
     "index.html": "/hello-bravo/index.html",
     "main.6b510502.css.map": "/hello-bravo/static/css/main.6b510502.css.map",
-    "main.e77491ce.js.map": "/hello-bravo/static/js/main.e77491ce.js.map"
+    "main.fb6ed8f5.js.map": "/hello-bravo/static/js/main.fb6ed8f5.js.map"
   },
   "entrypoints": [
     "static/css/main.6b510502.css",
-    "static/js/main.e77491ce.js"
+    "static/js/main.fb6ed8f5.js"
   ]
 }
