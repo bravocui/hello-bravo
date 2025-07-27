@@ -170,3 +170,7 @@ web/.yarn/*
 # Docusaurus
 .docusaurus
 .cache-loader
+
+# Environment backup files
+*.env.backup
+.env.backup
