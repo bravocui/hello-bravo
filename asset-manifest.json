@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/hello-bravo/static/css/main.a6f1758f.css",
+    "main.js": "/hello-bravo/static/js/main.589a6236.js",
+    "index.html": "/hello-bravo/index.html",
+    "main.a6f1758f.css.map": "/hello-bravo/static/css/main.a6f1758f.css.map",
+    "main.589a6236.js.map": "/hello-bravo/static/js/main.589a6236.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.a6f1758f.css",
+    "static/js/main.589a6236.js"
+  ]
+}
