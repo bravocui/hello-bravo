@@ -16,6 +16,7 @@ from features.fitness import router as fitness_router
 from features.travel import router as travel_router
 from features.weather import router as weather_router
 from features.ledger import router as ledger_router
+from features.users import router as users_router
 
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
 
@@ -42,6 +43,7 @@ app.include_router(fitness_router)
 app.include_router(travel_router)
 app.include_router(weather_router)
 app.include_router(ledger_router)
+app.include_router(users_router)
 
 # Auth endpoints
 @app.post("/auth/google")

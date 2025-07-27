@@ -7,8 +7,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 import base64
 import os
+from sqlalchemy.orm import Session
 from models import User
 from mock_data import MOCK_USERS
+from database import get_db
+from services.user_service import UserService
 
 # JWT Configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
@@ -83,18 +86,28 @@ def create_jwt(user: dict):
     to_encode = {"sub": user["email"], "exp": expire, "user": user}
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(session_token: str = Cookie(None)) -> User:
+async def get_current_user(session_token: str = Cookie(None), db: Session = Depends(get_db)) -> User:
     """Get current user from JWT cookie"""
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated (no cookie)")
     try:
         payload = jwt.decode(session_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user = payload["user"]
-        return User(**user)
+        user_data = payload["user"]
+        
+        # Get fresh user data from database
+        db_user = UserService.get_user_by_id(db, user_data["id"])
+        if not db_user:
+            raise HTTPException(status_code=401, detail="User not found in database")
+        
+        return User(
+            email=db_user.email,
+            name=db_user.name,
+            picture=db_user.picture_url
+        )
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid session token")
 
-async def google_auth(token: dict, response: Response):
+async def google_auth(token: dict, response: Response, db: Session = Depends(get_db)):
     """Handle Google OAuth authentication"""
     token_value = token.get("token", "")
     
@@ -103,11 +116,22 @@ async def google_auth(token: dict, response: Response):
     
     # Demo login
     if token_value.startswith('demo-token-'):
-        user = MOCK_USERS["demo-token"]
+        user_data = MOCK_USERS["demo-token"]
     else:
-        user = await verify_google_token(token_value)
+        user_data = await verify_google_token(token_value)
     
-    jwt_token = create_jwt(user)
+    # Get or create user in database
+    db_user = UserService.get_or_create_user(db, user_data)
+    
+    # Create JWT with database user ID
+    jwt_user_data = {
+        "email": db_user.email,
+        "name": db_user.name,
+        "picture": db_user.picture_url,
+        "id": db_user.id
+    }
+    
+    jwt_token = create_jwt(jwt_user_data)
     # Set secure, HTTP-only cookie
     response.set_cookie(
         key=JWT_COOKIE_NAME,
@@ -117,7 +141,7 @@ async def google_auth(token: dict, response: Response):
         samesite="lax",
         max_age=JWT_EXPIRE_MINUTES*60
     )
-    return {"user": user}
+    return {"user": jwt_user_data}
 
 async def logout(response: Response):
     """Handle user logout"""
