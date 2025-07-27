@@ -1,6 +1,8 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import httpx
@@ -8,6 +10,13 @@ import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime, date
+from mock_data import (
+    MOCK_FITNESS_DATA,
+    MOCK_TRAVEL_DATA,
+    MOCK_WEATHER_DATA,
+    MOCK_LEDGER_DATA,
+    MOCK_USERS
+)
 
 load_dotenv()
 
@@ -67,7 +76,7 @@ class LedgerEntry(BaseModel):
     notes: Optional[str] = None
 
 # Mock data storage (in production, use a database)
-mock_users = {}
+mock_users = MOCK_USERS.copy()
 mock_fitness_data = {}
 mock_travel_data = {}
 mock_ledger_data = {}
@@ -90,24 +99,16 @@ async def google_auth(token: dict):
     # Extract token from request body
     token_value = token.get("token", "")
     print(f"Received token: {token_value}")  # Debug log
-    
+
     # In a real app, you would verify the Google token here
     # For demo login, create a mock user for Bravo C
     if token_value.startswith('demo-token-'):
         print("Creating demo user for Bravo C")  # Debug log
-        mock_user = User(
-            email="bravocui@gmail.com",
-            name="Bravo C",
-            picture="https://via.placeholder.com/150"
-        )
+        mock_user = User(**MOCK_USERS["demo-token"])
     else:
         print("Creating default user")  # Debug log
         # Default mock user for other cases
-        mock_user = User(
-            email="user@example.com",
-            name="John Doe",
-            picture="https://via.placeholder.com/150"
-        )
+        mock_user = User(**MOCK_USERS["default-token"])
     
     mock_users[token_value] = mock_user
     return {"access_token": token_value, "user": mock_user}
@@ -123,32 +124,7 @@ async def get_fitness_entries(current_user: User = Depends(get_current_user)):
     user_email = current_user.email
     if user_email not in mock_fitness_data:
         # Return mock data
-        mock_fitness_data[user_email] = [
-            {
-                "id": 1,
-                "date": "2024-01-15",
-                "activity": "Running",
-                "duration": 30,
-                "calories": 300,
-                "notes": "Morning run in the park"
-            },
-            {
-                "id": 2,
-                "date": "2024-01-14",
-                "activity": "Weight Training",
-                "duration": 45,
-                "calories": 200,
-                "notes": "Upper body workout"
-            },
-            {
-                "id": 3,
-                "date": "2024-01-13",
-                "activity": "Cycling",
-                "duration": 60,
-                "calories": 500,
-                "notes": "Mountain biking trail"
-            }
-        ]
+        mock_fitness_data[user_email] = MOCK_FITNESS_DATA.copy()
     return mock_fitness_data[user_email]
 
 @app.post("/fitness/entries")
@@ -172,32 +148,7 @@ async def get_travel_entries(current_user: User = Depends(get_current_user)):
     user_email = current_user.email
     if user_email not in mock_travel_data:
         # Return mock data
-        mock_travel_data[user_email] = [
-            {
-                "id": 1,
-                "destination": "Zurich, Switzerland",
-                "start_date": "2024-01-10",
-                "end_date": "2024-01-15",
-                "description": "Business trip to Zurich with some sightseeing",
-                "photos": [
-                    "https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=Zurich+Lake",
-                    "https://via.placeholder.com/300x200/10B981/FFFFFF?text=Old+Town"
-                ],
-                "rating": 5
-            },
-            {
-                "id": 2,
-                "destination": "Geneva, Switzerland",
-                "start_date": "2023-12-20",
-                "end_date": "2023-12-25",
-                "description": "Christmas vacation in Geneva",
-                "photos": [
-                    "https://via.placeholder.com/300x200/EF4444/FFFFFF?text=Jet+d'Eau",
-                    "https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Christmas+Market"
-                ],
-                "rating": 4
-            }
-        ]
+        mock_travel_data[user_email] = MOCK_TRAVEL_DATA.copy()
     return mock_travel_data[user_email]
 
 @app.post("/travel/entries")
@@ -218,42 +169,7 @@ async def create_travel_entry(
 @app.get("/weather/switzerland")
 async def get_switzerland_weather():
     """Get weather forecast for major Swiss cities"""
-    # Mock weather data for Swiss cities
-    swiss_cities = [
-        {
-            "location": "Zurich",
-            "temperature": 12.5,
-            "description": "Partly cloudy",
-            "humidity": 65,
-            "wind_speed": 8.2,
-            "icon": "cloudy"
-        },
-        {
-            "location": "Geneva",
-            "temperature": 14.2,
-            "description": "Sunny",
-            "humidity": 58,
-            "wind_speed": 5.1,
-            "icon": "sunny"
-        },
-        {
-            "location": "Bern",
-            "temperature": 11.8,
-            "description": "Light rain",
-            "humidity": 72,
-            "wind_speed": 6.8,
-            "icon": "rainy"
-        },
-        {
-            "location": "Basel",
-            "temperature": 13.1,
-            "description": "Overcast",
-            "humidity": 68,
-            "wind_speed": 7.3,
-            "icon": "cloudy"
-        }
-    ]
-    return swiss_cities
+    return MOCK_WEATHER_DATA
 
 @app.get("/weather/{city}")
 async def get_city_weather(city: str):
@@ -277,78 +193,7 @@ async def get_ledger_entries(current_user: User = Depends(get_current_user)):
     user_email = current_user.email
     if user_email not in mock_ledger_data:
         # Return mock data
-        mock_ledger_data[user_email] = [
-            {
-                "id": 1,
-                "year": 2024,
-                "month": 1,
-                "category": "Food & Dining",
-                "amount": 120.50,
-                "credit_card": "Chase Sapphire",
-                "owner": "Bravo C",
-                "notes": "Weekly groceries"
-            },
-            {
-                "id": 2,
-                "year": 2024,
-                "month": 1,
-                "category": "Transportation",
-                "amount": 45.00,
-                "credit_card": "Amex Gold",
-                "owner": "Bravo C",
-                "notes": "Fuel for car"
-            },
-            {
-                "id": 3,
-                "year": 2024,
-                "month": 1,
-                "category": "Entertainment",
-                "amount": 15.99,
-                "credit_card": "Chase Sapphire",
-                "owner": "Bravo C",
-                "notes": "Netflix subscription"
-            },
-            {
-                "id": 4,
-                "year": 2024,
-                "month": 1,
-                "category": "Shopping",
-                "amount": 89.99,
-                "credit_card": "Amex Gold",
-                "owner": "Bravo C",
-                "notes": "Amazon purchase"
-            },
-            {
-                "id": 5,
-                "year": 2024,
-                "month": 1,
-                "category": "Food & Dining",
-                "amount": 67.30,
-                "credit_card": "Chase Sapphire",
-                "owner": "Bravo C",
-                "notes": "Restaurant dinner"
-            },
-            {
-                "id": 6,
-                "year": 2023,
-                "month": 12,
-                "category": "Transportation",
-                "amount": 52.00,
-                "credit_card": "Amex Gold",
-                "owner": "Bravo C",
-                "notes": "Uber rides"
-            },
-            {
-                "id": 7,
-                "year": 2023,
-                "month": 12,
-                "category": "Entertainment",
-                "amount": 25.00,
-                "credit_card": "Chase Sapphire",
-                "owner": "Bravo C",
-                "notes": "Movie tickets"
-            }
-        ]
+        mock_ledger_data[user_email] = MOCK_LEDGER_DATA.copy()
     return mock_ledger_data[user_email]
 
 @app.post("/ledger/entries")
@@ -368,6 +213,21 @@ async def create_ledger_entry(
 @app.get("/")
 async def root():
     return {"message": "Personal Life Tracking API", "version": "1.0.0"}
+
+# Catch-all route to serve React app for client-side routing
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str, request: Request):
+    # Don't serve React app for API routes
+    if full_path.startswith(("api/", "auth/", "fitness/", "travel/", "weather/", "ledger/")):
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
+    # Serve the React app's index.html for all other routes
+    try:
+        # For development, serve from the React dev server
+        # In production, you would serve from the built files
+        return {"message": "React app route. Use the React dev server for development."}
+    except Exception:
+        return {"message": "React app not found. Make sure to run the React dev server."}
 
 if __name__ == "__main__":
     import uvicorn
