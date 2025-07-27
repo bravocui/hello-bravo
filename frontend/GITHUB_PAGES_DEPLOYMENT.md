@@ -63,12 +63,17 @@ npm run deploy
 ### Development (`.env.development`):
 ```
 REACT_APP_API_URL=http://localhost:8000
+REACT_APP_BASENAME=/
+PUBLIC_URL=http://localhost:3000
 ```
 
 ### Production (`.env.production`):
 ```
 REACT_APP_API_URL=https://your-backend-url.com
+REACT_APP_BASENAME=/hello-bravo
 ```
+
+**Note**: The `PUBLIC_URL` environment variable in development overrides the `homepage` setting in `package.json`, ensuring the app runs on `localhost:3000` during development while still deploying correctly to GitHub Pages.
 
 ## 🔍 Testing
 
