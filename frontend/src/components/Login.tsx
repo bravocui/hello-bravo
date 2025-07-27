@@ -53,7 +53,6 @@ const Login: React.FC = () => {
         {
           theme: 'outline',
           size: 'large',
-          width: '100%',
           text: 'signin_with',
         }
       );
@@ -75,7 +74,7 @@ const Login: React.FC = () => {
 
         {/* Feature Preview */}
         <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-4 gap-4 text-center">
             <div className="flex flex-col items-center space-y-2">
               <div className="w-12 h-12 bg-fitness-100 rounded-lg flex items-center justify-center">
                 <Activity className="w-6 h-6 text-fitness-600" />
