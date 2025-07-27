@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, ArrowLeft, Plus, Calendar, Clock, Flame } from 'lucide-react';
-import axios from 'axios';
+import api from '../config/api';
 
 interface FitnessEntry {
   id: number;
@@ -24,7 +24,7 @@ const FitnessPage: React.FC = () => {
 
   const fetchFitnessData = async () => {
     try {
-      const response = await axios.get('/fitness/entries');
+      const response = await api.get('/fitness/entries');
       setFitnessData(response.data);
     } catch (error) {
       console.error('Failed to fetch fitness data:', error);

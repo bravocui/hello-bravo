@@ -20,12 +20,17 @@ from mock_data import (
 
 load_dotenv()
 
-app = FastAPI(title="Personal Life Tracking API", version="1.0.0")
+app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
+
+origins = [
+    "https://bravocui.github.io",
+    "http://localhost:3000", # For local development
+]
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

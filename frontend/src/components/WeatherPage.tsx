@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cloud, ArrowLeft, Thermometer, Droplets, Wind, MapPin } from 'lucide-react';
-import axios from 'axios';
+import api from '../config/api';
 
 interface WeatherData {
   location: string;
@@ -25,7 +25,7 @@ const WeatherPage: React.FC = () => {
 
   const fetchWeatherData = async () => {
     try {
-      const response = await axios.get('/weather/switzerland');
+      const response = await api.get('/weather/switzerland');
       setWeatherData(response.data);
     } catch (error) {
       console.error('Failed to fetch weather data:', error);

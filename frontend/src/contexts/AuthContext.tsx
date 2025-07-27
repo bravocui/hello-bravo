@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import api from '../config/api';
 
 interface User {
   email: string;
@@ -37,9 +37,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check if user is already logged in (from localStorage)
     const token = localStorage.getItem('authToken');
     if (token) {
-      // Set up axios default headers
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
       // Verify token with backend
       verifyToken(token);
     } else {
@@ -49,13 +46,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const verifyToken = async (token: string) => {
     try {
-      const response = await axios.get('/user/profile');
+      const response = await api.get('/user/profile');
       setUser(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Token verification failed:', error);
       localStorage.removeItem('authToken');
-      delete axios.defaults.headers.common['Authorization'];
       setLoading(false);
     }
   };
@@ -63,13 +59,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (token: string) => {
     try {
       // Mock Google authentication
-      const response = await axios.post('/auth/google', { token });
+      const response = await api.post('/auth/google', { token });
       
       const { access_token, user: userData } = response.data;
       
       // Store token
       localStorage.setItem('authToken', access_token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
       setUser(userData);
     } catch (error) {
@@ -80,7 +75,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('authToken');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 

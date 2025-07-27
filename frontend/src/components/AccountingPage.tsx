@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, ArrowLeft, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
-import axios from 'axios';
+import api from '../config/api';
 
 interface LedgerEntry {
   id: number;
@@ -32,7 +32,7 @@ const AccountingPage: React.FC = () => {
 
   const fetchLedgerData = async () => {
     try {
-      const response = await axios.get('/ledger/entries');
+      const response = await api.get('/ledger/entries');
       setLedgerData(response.data);
     } catch (error) {
       console.error('Failed to fetch ledger data:', error);

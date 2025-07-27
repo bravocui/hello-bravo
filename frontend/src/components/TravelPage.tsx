@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, ArrowLeft, Plus, Calendar, Star, Image } from 'lucide-react';
-import axios from 'axios';
+import api from '../config/api';
 
 interface TravelEntry {
   id: number;
@@ -25,7 +25,7 @@ const TravelPage: React.FC = () => {
 
   const fetchTravelData = async () => {
     try {
-      const response = await axios.get('/travel/entries');
+      const response = await api.get('/travel/entries');
       setTravelData(response.data);
     } catch (error) {
       console.error('Failed to fetch travel data:', error);
