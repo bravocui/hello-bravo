@@ -17,7 +17,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
+    <AuthProvider>      
       <Router basename="/hello-bravo">
         <div className="min-h-screen bg-gray-50">
           <Routes>
