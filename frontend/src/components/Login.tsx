@@ -44,7 +44,7 @@ const Login: React.FC = () => {
   useEffect(() => {
     if (window.google) {
       window.google.accounts.id.initialize({
-        client_id: 'your-google-client-id.apps.googleusercontent.com', // Replace with your actual client ID
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!, // Use env variable
         callback: handleGoogleLogin,
       });
 

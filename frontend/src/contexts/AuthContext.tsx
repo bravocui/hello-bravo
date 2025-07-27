@@ -32,49 +32,44 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
-    // Check if user is already logged in (from localStorage)
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // Verify token with backend
-      verifyToken(token);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const verifyToken = async (token: string) => {
-    try {
-      const response = await api.get('/user/profile');
-      setUser(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Token verification failed:', error);
-      localStorage.removeItem('authToken');
-      setLoading(false);
-    }
-  };
+    // Only check auth once on mount
+    if (hasCheckedAuth) return;
+    
+    const checkAuth = async () => {
+      try {
+        const response = await api.get('/user/profile');
+        setUser(response.data);
+      } catch (error) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+        setHasCheckedAuth(true);
+      }
+    };
+    
+    checkAuth();
+  }, [hasCheckedAuth]);
 
   const login = async (token: string) => {
     try {
-      // Mock Google authentication
       const response = await api.post('/auth/google', { token });
-      
-      const { access_token, user: userData } = response.data;
-      
-      // Store token
-      localStorage.setItem('authToken', access_token);
-      
+      const { user: userData } = response.data;
       setUser(userData);
     } catch (error) {
-      console.error('Login failed:', error);
+      setUser(null);
       throw error;
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
+  const logout = async () => {
+    try {
+      await api.post('/logout');
+    } catch (error) {
+      // Ignore errors on logout
+    }
     setUser(null);
   };
 

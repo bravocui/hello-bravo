@@ -21,6 +21,10 @@ from jose import jwt, JWTError
 import requests
 from fastapi import Response, Cookie
 from datetime import timedelta
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+import base64
 
 load_dotenv()
 
@@ -105,6 +109,7 @@ async def verify_google_token(id_token: str):
     # For demo tokens, skip verification
     if id_token.startswith('demo-token-'):
         return MOCK_USERS["demo-token"]
+    
     # Real Google token verification
     try:
         # Get Google's public keys
@@ -115,8 +120,29 @@ async def verify_google_token(id_token: str):
         key = next((k for k in jwks['keys'] if k['kid'] == unverified_header['kid']), None)
         if not key:
             raise HTTPException(status_code=401, detail="Invalid Google token (no key)")
-        public_key = jwt.construct_rsa_public_key(key)
-        payload = jwt.decode(id_token, public_key, algorithms=['RS256'], audience=GOOGLE_CLIENT_ID)
+        
+        # Convert JWK to PEM format for python-jose
+        n_b64 = key['n']
+        e_b64 = key['e']
+        
+        # Decode base64url to bytes
+        n = base64.urlsafe_b64decode(n_b64 + '==')
+        e = base64.urlsafe_b64decode(e_b64 + '==')
+        
+        # Create RSA public key
+        public_numbers = rsa.RSAPublicNumbers(
+            e=int.from_bytes(e, 'big'),
+            n=int.from_bytes(n, 'big')
+        )
+        public_key = public_numbers.public_key(backend=default_backend())
+        
+        # Convert to PEM format
+        pem = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.PKCS1
+        )
+        
+        payload = jwt.decode(id_token, pem, algorithms=['RS256'], audience=GOOGLE_CLIENT_ID)
         # Extract user info
         return {
             "email": payload["email"],
@@ -148,11 +174,13 @@ async def get_current_user(session_token: str = Cookie(None)) -> User:
 @app.post("/auth/google")
 async def google_auth(token: dict, response: Response):
     token_value = token.get("token", "")
+    
     # Demo login
     if token_value.startswith('demo-token-'):
         user = MOCK_USERS["demo-token"]
     else:
         user = await verify_google_token(token_value)
+    
     jwt_token = create_jwt(user)
     # Set secure, HTTP-only cookie
     response.set_cookie(
