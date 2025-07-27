@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Activity, MapPin, Cloud, DollarSign } from 'lucide-react';
+import { Activity, MapPin, Cloud } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -75,7 +75,7 @@ const Login: React.FC = () => {
 
         {/* Feature Preview */}
         <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
-          <div className="grid grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-3 gap-4 text-center">
             <div className="flex flex-col items-center space-y-2">
               <div className="w-12 h-12 bg-fitness-100 rounded-lg flex items-center justify-center">
                 <Activity className="w-6 h-6 text-fitness-600" />
@@ -94,12 +94,7 @@ const Login: React.FC = () => {
               </div>
               <span className="text-sm font-medium text-gray-700">Weather</span>
             </div>
-            <div className="flex flex-col items-center space-y-2">
-              <div className="w-12 h-12 bg-accounting-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-accounting-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">Accounting</span>
-            </div>
+
           </div>
         </div>
 

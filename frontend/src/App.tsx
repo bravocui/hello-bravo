@@ -6,7 +6,6 @@ import Dashboard from './components/Dashboard';
 import FitnessPage from './components/FitnessPage';
 import TravelPage from './components/TravelPage';
 import WeatherPage from './components/WeatherPage';
-import AccountingPage from './components/AccountingPage';
 import './index.css';
 
 // Protected Route component
@@ -51,14 +50,6 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <WeatherPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/accounting" 
-              element={
-                <ProtectedRoute>
-                  <AccountingPage />
                 </ProtectedRoute>
               } 
             />
