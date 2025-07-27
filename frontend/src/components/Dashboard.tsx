@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Activity, MapPin, Cloud, LogOut } from 'lucide-react';
+import { Activity, MapPin, Cloud, LogOut, DollarSign } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -40,7 +40,15 @@ const Dashboard: React.FC = () => {
       path: '/weather',
       stats: '4 cities monitored'
     },
-
+    {
+      id: 'accounting',
+      title: 'Accounting',
+      description: 'Track your expenses',
+      icon: DollarSign,
+      color: 'accounting',
+      path: '/accounting',
+      stats: 'Expense tracking',
+    },
   ];
 
   return (
