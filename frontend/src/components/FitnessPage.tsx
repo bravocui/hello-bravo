@@ -16,6 +16,7 @@ const FitnessPage: React.FC = () => {
   const navigate = useNavigate();
   const [fitnessData, setFitnessData] = useState<FitnessEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchFitnessData();
@@ -27,49 +28,7 @@ const FitnessPage: React.FC = () => {
       setFitnessData(response.data);
     } catch (error) {
       console.error('Failed to fetch fitness data:', error);
-      // Fallback to mock data
-      setFitnessData([
-        {
-          id: 1,
-          date: '2024-01-15',
-          activity: 'Running',
-          duration: 30,
-          calories: 300,
-          notes: 'Morning run in the park'
-        },
-        {
-          id: 2,
-          date: '2024-01-14',
-          activity: 'Weight Training',
-          duration: 45,
-          calories: 200,
-          notes: 'Upper body workout'
-        },
-        {
-          id: 3,
-          date: '2024-01-13',
-          activity: 'Cycling',
-          duration: 60,
-          calories: 500,
-          notes: 'Mountain biking trail'
-        },
-        {
-          id: 4,
-          date: '2024-01-12',
-          activity: 'Swimming',
-          duration: 40,
-          calories: 350,
-          notes: 'Freestyle laps'
-        },
-        {
-          id: 5,
-          date: '2024-01-11',
-          activity: 'Yoga',
-          duration: 60,
-          calories: 150,
-          notes: 'Vinyasa flow session'
-        }
-      ]);
+      setError(`Error loading data from server: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -102,6 +61,30 @@ const FitnessPage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fitness-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading fitness data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Data</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchFitnessData();
+            }}
+            className="bg-fitness-600 hover:bg-fitness-700 text-white px-6 py-3 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );

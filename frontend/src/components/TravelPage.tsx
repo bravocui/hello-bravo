@@ -17,6 +17,7 @@ const TravelPage: React.FC = () => {
   const navigate = useNavigate();
   const [travelData, setTravelData] = useState<TravelEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTravelData();
@@ -28,48 +29,7 @@ const TravelPage: React.FC = () => {
       setTravelData(response.data);
     } catch (error) {
       console.error('Failed to fetch travel data:', error);
-      // Fallback to mock data
-      setTravelData([
-        {
-          id: 1,
-          destination: 'Zurich, Switzerland',
-          start_date: '2024-01-10',
-          end_date: '2024-01-15',
-          description: 'Business trip to Zurich with some sightseeing. Visited the beautiful Lake Zurich and explored the historic Old Town.',
-          photos: [
-            'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=Zurich+Lake',
-            'https://via.placeholder.com/300x200/10B981/FFFFFF?text=Old+Town',
-            'https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Swiss+Alps'
-          ],
-          rating: 5
-        },
-        {
-          id: 2,
-          destination: 'Geneva, Switzerland',
-          start_date: '2023-12-20',
-          end_date: '2023-12-25',
-          description: 'Christmas vacation in Geneva. Enjoyed the festive atmosphere and visited the famous Jet d\'Eau fountain.',
-          photos: [
-            'https://via.placeholder.com/300x200/EF4444/FFFFFF?text=Jet+d\'Eau',
-            'https://via.placeholder.com/300x200/F59E0B/FFFFFF?text=Christmas+Market',
-            'https://via.placeholder.com/300x200/8B5CF6/FFFFFF?text=UN+Palace'
-          ],
-          rating: 4
-        },
-        {
-          id: 3,
-          destination: 'Lucerne, Switzerland',
-          start_date: '2023-11-15',
-          end_date: '2023-11-18',
-          description: 'Weekend getaway to Lucerne. Walked across the famous Chapel Bridge and enjoyed the mountain views.',
-          photos: [
-            'https://via.placeholder.com/300x200/06B6D4/FFFFFF?text=Chapel+Bridge',
-            'https://via.placeholder.com/300x200/84CC16/FFFFFF?text=Mountain+View',
-            'https://via.placeholder.com/300x200/EC4899/FFFFFF?text=Lucerne+Lake'
-          ],
-          rating: 5
-        }
-      ]);
+      setError(`Error loading data from server: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -105,6 +65,30 @@ const TravelPage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-travel-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading travel data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Data</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchTravelData();
+            }}
+            className="bg-travel-600 hover:bg-travel-700 text-white px-6 py-3 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );

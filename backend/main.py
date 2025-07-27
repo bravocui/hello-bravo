@@ -56,10 +56,21 @@ class WeatherData(BaseModel):
     wind_speed: float
     icon: str
 
+class LedgerEntry(BaseModel):
+    id: Optional[int] = None
+    year: int
+    month: int
+    category: str
+    amount: float
+    credit_card: str
+    owner: str
+    notes: Optional[str] = None
+
 # Mock data storage (in production, use a database)
 mock_users = {}
 mock_fitness_data = {}
 mock_travel_data = {}
+mock_ledger_data = {}
 
 # Authentication helper
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
@@ -258,6 +269,101 @@ async def get_city_weather(city: str):
         "icon": "cloudy"
     }
     return weather_data
+
+# Accounting Ledger endpoints
+@app.get("/ledger/entries")
+async def get_ledger_entries(current_user: User = Depends(get_current_user)):
+    """Get all ledger entries for the current user"""
+    user_email = current_user.email
+    if user_email not in mock_ledger_data:
+        # Return mock data
+        mock_ledger_data[user_email] = [
+            {
+                "id": 1,
+                "year": 2024,
+                "month": 1,
+                "category": "Food & Dining",
+                "amount": 120.50,
+                "credit_card": "Chase Sapphire",
+                "owner": "Bravo C",
+                "notes": "Weekly groceries"
+            },
+            {
+                "id": 2,
+                "year": 2024,
+                "month": 1,
+                "category": "Transportation",
+                "amount": 45.00,
+                "credit_card": "Amex Gold",
+                "owner": "Bravo C",
+                "notes": "Fuel for car"
+            },
+            {
+                "id": 3,
+                "year": 2024,
+                "month": 1,
+                "category": "Entertainment",
+                "amount": 15.99,
+                "credit_card": "Chase Sapphire",
+                "owner": "Bravo C",
+                "notes": "Netflix subscription"
+            },
+            {
+                "id": 4,
+                "year": 2024,
+                "month": 1,
+                "category": "Shopping",
+                "amount": 89.99,
+                "credit_card": "Amex Gold",
+                "owner": "Bravo C",
+                "notes": "Amazon purchase"
+            },
+            {
+                "id": 5,
+                "year": 2024,
+                "month": 1,
+                "category": "Food & Dining",
+                "amount": 67.30,
+                "credit_card": "Chase Sapphire",
+                "owner": "Bravo C",
+                "notes": "Restaurant dinner"
+            },
+            {
+                "id": 6,
+                "year": 2023,
+                "month": 12,
+                "category": "Transportation",
+                "amount": 52.00,
+                "credit_card": "Amex Gold",
+                "owner": "Bravo C",
+                "notes": "Uber rides"
+            },
+            {
+                "id": 7,
+                "year": 2023,
+                "month": 12,
+                "category": "Entertainment",
+                "amount": 25.00,
+                "credit_card": "Chase Sapphire",
+                "owner": "Bravo C",
+                "notes": "Movie tickets"
+            }
+        ]
+    return mock_ledger_data[user_email]
+
+@app.post("/ledger/entries")
+async def create_ledger_entry(
+    entry: LedgerEntry,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new ledger entry"""
+    user_email = current_user.email
+    if user_email not in mock_ledger_data:
+        mock_ledger_data[user_email] = []
+    
+    entry.id = len(mock_ledger_data[user_email]) + 1
+    mock_ledger_data[user_email].append(entry.dict())
+    return entry
 
 @app.get("/")
 async def root():

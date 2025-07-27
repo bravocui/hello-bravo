@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Activity, MapPin, Cloud, LogOut } from 'lucide-react';
+import { Activity, MapPin, Cloud, LogOut, DollarSign } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -39,6 +39,15 @@ const Dashboard: React.FC = () => {
       color: 'weather',
       path: '/weather',
       stats: '4 cities monitored'
+    },
+    {
+      id: 'accounting',
+      title: 'Expense Tracker',
+      description: 'Track your expenses and spending',
+      icon: DollarSign,
+      color: 'accounting',
+      path: '/accounting',
+      stats: '7 expenses recorded'
     }
   ];
 
@@ -90,7 +99,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Category Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category) => {
             const IconComponent = category.icon;
             return (
@@ -138,7 +147,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-fitness-100 rounded-lg flex items-center justify-center">
@@ -171,6 +180,18 @@ const Dashboard: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Cities Monitored</p>
                 <p className="text-2xl font-bold text-gray-900">4</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-accounting-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-accounting-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+                <p className="text-2xl font-bold text-gray-900">7</p>
               </div>
             </div>
           </div>

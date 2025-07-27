@@ -16,6 +16,7 @@ const WeatherPage: React.FC = () => {
   const navigate = useNavigate();
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,41 +29,7 @@ const WeatherPage: React.FC = () => {
       setWeatherData(response.data);
     } catch (error) {
       console.error('Failed to fetch weather data:', error);
-      // Fallback to mock data
-      setWeatherData([
-        {
-          location: 'Zurich',
-          temperature: 12.5,
-          description: 'Partly cloudy',
-          humidity: 65,
-          wind_speed: 8.2,
-          icon: 'cloudy'
-        },
-        {
-          location: 'Geneva',
-          temperature: 14.2,
-          description: 'Sunny',
-          humidity: 58,
-          wind_speed: 5.1,
-          icon: 'sunny'
-        },
-        {
-          location: 'Bern',
-          temperature: 11.8,
-          description: 'Light rain',
-          humidity: 72,
-          wind_speed: 6.8,
-          icon: 'rainy'
-        },
-        {
-          location: 'Basel',
-          temperature: 13.1,
-          description: 'Overcast',
-          humidity: 68,
-          wind_speed: 7.3,
-          icon: 'cloudy'
-        }
-      ]);
+      setError(`Error loading data from server: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -106,6 +73,30 @@ const WeatherPage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-weather-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading weather data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Data</h3>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchWeatherData();
+            }}
+            className="bg-weather-600 hover:bg-weather-700 text-white px-6 py-3 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
