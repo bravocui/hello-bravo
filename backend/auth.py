@@ -85,50 +85,87 @@ async def get_current_user(session_token: str = Cookie(None), db: Session = Depe
         user_data = payload["user"]
         
         # Get fresh user data from database
-        db_user = UserService.get_user_by_id(db, user_data["id"])
-        if not db_user:
-            raise HTTPException(status_code=401, detail="User not found in database")
+        try:
+            db_user = UserService.get_user_by_id(db, user_data["id"])
+            if not db_user:
+                raise HTTPException(status_code=401, detail="User not found in database")
+        except Exception as db_error:
+            # Database connection or operation error
+            error_msg = f"Database error during authentication: {str(db_error)}"
+            if "connection" in str(db_error).lower():
+                error_msg = f"Database connection failed: {str(db_error)}"
+            elif "timeout" in str(db_error).lower():
+                error_msg = f"Database connection timeout: {str(db_error)}"
+            elif "authentication" in str(db_error).lower():
+                error_msg = f"Database authentication failed: {str(db_error)}"
+            raise HTTPException(status_code=500, detail=error_msg)
         
         return User(
             email=db_user.email,
             name=db_user.name,
             picture=db_user.picture_url
         )
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
+    except JWTError as jwt_error:
+        raise HTTPException(status_code=401, detail=f"Invalid session token: {str(jwt_error)}")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
 
 async def google_auth(token: dict, response: Response, db: Session = Depends(get_db)):
     """Handle Google OAuth authentication"""
-    token_value = token.get("token", "")
-    
-    # Demo login
-    if token_value.startswith('demo-token-'):
-        user_data = MOCK_USERS["demo-token"]
-    else:
-        user_data = await verify_google_token(token_value)
-    
-    # Get or create user in database
-    db_user = UserService.get_or_create_user(db, user_data)
-    
-    # Create JWT with database user ID
-    jwt_user_data = {
-        "email": db_user.email,
-        "name": db_user.name,
-        "picture": db_user.picture_url,
-        "id": db_user.id
-    }
-    
-    jwt_token = create_jwt(jwt_user_data)
-    # Set secure, HTTP-only cookie
-    response.set_cookie(
-        key=JWT_COOKIE_NAME,
-        value=jwt_token,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=JWT_EXPIRE_MINUTES*60
-    )
-    return {"user": jwt_user_data}
+    try:
+        token_value = token.get("token", "")
+        
+        # Demo login
+        if token_value.startswith('demo-token-'):
+            user_data = MOCK_USERS["demo-token"]
+        else:
+            user_data = await verify_google_token(token_value)
+        
+        # Get or create user in database
+        try:
+            db_user = UserService.get_or_create_user(db, user_data)
+        except Exception as db_error:
+            # Database connection or operation error
+            error_msg = f"Database error during login: {str(db_error)}"
+            if "connection" in str(db_error).lower():
+                error_msg = f"Database connection failed: {str(db_error)}"
+            elif "timeout" in str(db_error).lower():
+                error_msg = f"Database connection timeout: {str(db_error)}"
+            elif "authentication" in str(db_error).lower():
+                error_msg = f"Database authentication failed: {str(db_error)}"
+            raise HTTPException(status_code=500, detail=error_msg)
+        
+        # Create JWT with database user ID
+        jwt_user_data = {
+            "email": db_user.email,
+            "name": db_user.name,
+            "picture": db_user.picture_url,
+            "id": db_user.id
+        }
+        
+        jwt_token = create_jwt(jwt_user_data)
+        # Set secure, HTTP-only cookie
+        response.set_cookie(
+            key=JWT_COOKIE_NAME,
+            value=jwt_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=JWT_EXPIRE_MINUTES*60
+        )
+        return {"user": jwt_user_data}
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (like from verify_google_token)
+        raise
+    except Exception as e:
+        # Catch any other unexpected errors
+        error_msg = f"Login failed: {str(e)}"
+        if "google" in str(e).lower():
+            error_msg = f"Google authentication error: {str(e)}"
+        elif "jwt" in str(e).lower():
+            error_msg = f"Token creation error: {str(e)}"
+        raise HTTPException(status_code=500, detail=error_msg)
 
 async def logout(response: Response):
     """Handle user logout"""

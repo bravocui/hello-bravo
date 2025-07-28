@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
+from fastapi.exceptions import RequestValidationError
 import os
 
 # Import centralized configuration
@@ -19,6 +20,28 @@ from features.ledger import router as ledger_router
 from features.users import router as users_router
 
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
+
+# Global exception handlers for better error messages
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "error_type": "http_exception"}
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Validation error: {str(exc)}", "error_type": "validation_error"}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}", "error_type": "internal_error"}
+    )
 
 # CORS middleware
 origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
