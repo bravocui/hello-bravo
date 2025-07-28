@@ -8,6 +8,7 @@ import TravelPage from './components/TravelPage';
 import WeatherPage from './components/WeatherPage';
 import AccountingPage from './components/AccountingPage';
 import DatabaseBanner from './components/DatabaseBanner';
+import HealthStatusBar from './components/HealthStatusBar';
 import './index.css';
 
 // Protected Route component
@@ -90,6 +91,7 @@ const AppContent: React.FC = () => {
           } 
         />
       </Routes>
+      <HealthStatusBar />
     </>
   );
 };

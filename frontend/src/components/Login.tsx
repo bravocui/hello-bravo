@@ -133,18 +133,6 @@ const Login: React.FC = () => {
           <div className="space-y-4">
             <div id="google-login-button" className="w-full"></div>
             
-            {/* Fallback Google Login (in case OAuth fails) */}
-            <button
-              onClick={() => {
-                console.log('Manual Google login triggered');
-                // You can implement a manual OAuth flow here if needed
-                alert('Google OAuth may have CORS issues. Please try the demo login or check console for details.');
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
-            >
-              <span>Manual Google Login (Fallback)</span>
-            </button>
-            
             {/* Demo Login Button (for development) */}
             <button
               onClick={() => handleDemoLogin()}

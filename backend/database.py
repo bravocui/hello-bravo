@@ -5,23 +5,47 @@ from sqlalchemy.orm import sessionmaker
 # Import centralized configuration
 from config import DATABASE_URL
 
+# Log database configuration
+print("🔧 Database Configuration:")
+print(f"   📍 DATABASE_URL: {DATABASE_URL}")
+print(f"   🔒 Pool pre-ping: Enabled")
+print(f"   🔄 Pool recycle: 300 seconds")
+print("=" * 60)
+
 # Create SQLAlchemy engine
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,  # Enable connection health checks
-    pool_recycle=300,    # Recycle connections after 5 minutes
-)
+try:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Enable connection health checks
+        pool_recycle=300,    # Recycle connections after 5 minutes
+        connect_args={"connect_timeout": 10}  # 10 second timeout
+    )
+    print("✅ SQLAlchemy engine created successfully")
+except Exception as e:
+    print(f"❌ Failed to create SQLAlchemy engine: {e}")
+    raise
 
 # Create SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+try:
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    print("✅ SessionLocal created successfully")
+except Exception as e:
+    print(f"❌ Failed to create SessionLocal: {e}")
+    raise
 
 # Create Base class for models
 Base = declarative_base()
+print("✅ SQLAlchemy Base class created")
 
 # Dependency to get database session
 def get_db():
-    db = SessionLocal()
     try:
+        db = SessionLocal()
+        print("🔗 Database session created")
         yield db
+    except Exception as e:
+        print(f"❌ Database session error: {e}")
+        raise
     finally:
-        db.close() 
+        db.close()
+        print("🔗 Database session closed") 

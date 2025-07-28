@@ -33,13 +33,27 @@ async def test_database_connection():
         from sqlalchemy import create_engine, text
         from config import DATABASE_URL
         
-        print(f"Testing database connection to: {DATABASE_URL[:50]}...")
+        print("🔍 Testing database connection...")
+        print(f"   URL: {DATABASE_URL}")
         
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        # Create engine with connection timeout
+        engine = create_engine(
+            DATABASE_URL, 
+            pool_pre_ping=True,
+            connect_args={"connect_timeout": 10}  # 10 second timeout
+        )
+        
+        print("   ⏳ Attempting to connect...")
+        
         with engine.connect() as connection:
             # Test basic connection
             result = connection.execute(text("SELECT 1"))
-            print("✅ Database connection successful!")
+            print("   ✅ Basic connection successful!")
+            
+            # Test database name
+            result = connection.execute(text("SELECT current_database()"))
+            db_name = result.scalar()
+            print(f"   📊 Connected to database: {db_name}")
             
             # List all tables
             result = connection.execute(text("""
@@ -50,13 +64,22 @@ async def test_database_connection():
             """))
             
             tables = [row[0] for row in result]
-            print(f"📋 Available tables: {tables}")
+            print(f"   📋 Available tables: {tables}")
+            
+            # Test user permissions
+            result = connection.execute(text("SELECT current_user"))
+            user = result.scalar()
+            print(f"   👤 Connected as user: {user}")
             
             database_available = True
+            print("   🎉 Database connection successful!")
             print("✅ Database is available for authentication")
             
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        print(f"❌ Database connection failed: {error_type}")
+        print(f"💬 Error details: {error_msg}")
         print("⚠️  Falling back to simplified authentication (no database)")
         database_available = False
 

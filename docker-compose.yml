@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend-dev:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080"
+    environment:
+      - ENVIRONMENT=development
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+
+  backend-prod:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8080"
+    environment:
+      - ENVIRONMENT=production
+    # For production, you would typically use environment variables or secrets
+    # instead of mounting .env files
+    env_file:
+      - ./backend/.env.production
+
+  # Optional: Add a database service for local testing
+  # postgres:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: life_tracker_dev
+  #     POSTGRES_USER: dev_user
+  #     POSTGRES_PASSWORD: dev_password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+# volumes:
+#   postgres_data: 
