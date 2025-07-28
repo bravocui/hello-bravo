@@ -2,10 +2,9 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 import os
-from dotenv import load_dotenv
 
-# Load environment variables first
-load_dotenv()
+# Import centralized configuration
+from config import ALLOWED_ORIGINS
 
 # Import models and auth
 from models import User
@@ -22,14 +21,7 @@ from features.users import router as users_router
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
 
 # CORS middleware
-origins = os.getenv("ALLOWED_ORIGINS")
-if origins:
-    origins = [o.strip() for o in origins.split(",") if o.strip()]
-else:
-    origins = [
-        "https://bravocui.github.io",
-        "http://localhost:3000", # For local development
-    ]
+origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,

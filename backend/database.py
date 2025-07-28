@@ -1,13 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# Database URL from environment variable
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/life_tracker")
+# Import centralized configuration
+from config import DATABASE_URL
 
 # Create SQLAlchemy engine
 engine = create_engine(

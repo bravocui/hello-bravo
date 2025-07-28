@@ -13,12 +13,11 @@ from mock_data import MOCK_USERS
 from database import get_db
 from services.user_service import UserService
 
+# Import centralized configuration
+from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, GOOGLE_CLIENT_ID
+
 # JWT Configuration
-JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_COOKIE_NAME = "session_token"
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # Default: 1 week
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 async def verify_google_token(id_token: str):
     """Verify Google ID token"""
