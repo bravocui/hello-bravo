@@ -46,12 +46,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 # CORS middleware
 origins = [o.strip() for o in ALLOWED_ORIGINS.split(",") if o.strip()]
 
+# Add additional headers for Google OAuth
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include feature routers

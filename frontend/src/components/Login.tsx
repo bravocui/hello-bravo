@@ -22,11 +22,14 @@ const Login: React.FC = () => {
 
   const handleGoogleLogin = useCallback(async (response: any) => {
     try {
+      console.log('Google login response received:', response);
       await login(response.credential);
       navigate('/');
     } catch (error) {
       console.error('Login failed:', error);
-      alert('Login failed. Please try again.');
+      // Show more detailed error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Login failed: ${errorMessage}`);
     }
   }, [login, navigate]);
 
@@ -44,19 +47,30 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     if (window.google) {
-      window.google.accounts.id.initialize({
-        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!, // Use env variable
-        callback: handleGoogleLogin,
-      });
+      try {
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID!, // Use env variable
+          callback: handleGoogleLogin,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
 
-      window.google.accounts.id.renderButton(
-        document.getElementById('google-login-button'),
-        {
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-        }
-      );
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-login-button'),
+          {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            type: 'standard',
+          }
+        );
+        
+        console.log('Google OAuth initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Google OAuth:', error);
+      }
+    } else {
+      console.log('Google OAuth not loaded yet');
     }
   }, [handleGoogleLogin]);
 
@@ -118,6 +132,18 @@ const Login: React.FC = () => {
           {/* Google Login Button */}
           <div className="space-y-4">
             <div id="google-login-button" className="w-full"></div>
+            
+            {/* Fallback Google Login (in case OAuth fails) */}
+            <button
+              onClick={() => {
+                console.log('Manual Google login triggered');
+                // You can implement a manual OAuth flow here if needed
+                alert('Google OAuth may have CORS issues. Please try the demo login or check console for details.');
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
+            >
+              <span>Manual Google Login (Fallback)</span>
+            </button>
             
             {/* Demo Login Button (for development) */}
             <button
