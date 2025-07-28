@@ -7,6 +7,7 @@ import FitnessPage from './components/FitnessPage';
 import TravelPage from './components/TravelPage';
 import WeatherPage from './components/WeatherPage';
 import AccountingPage from './components/AccountingPage';
+import DatabaseBanner from './components/DatabaseBanner';
 import './index.css';
 
 // Protected Route component
@@ -33,52 +34,63 @@ const App: React.FC = () => {
     <AuthProvider>      
       <Router basename={process.env.REACT_APP_BASENAME}>
         <div className="min-h-screen bg-gray-50">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/fitness" 
-              element={
-                <ProtectedRoute>
-                  <FitnessPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/travel" 
-              element={
-                <ProtectedRoute>
-                  <TravelPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/weather" 
-              element={
-                <ProtectedRoute>
-                  <WeatherPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/accounting" 
-              element={
-                <ProtectedRoute>
-                  <AccountingPage />
-                </ProtectedRoute>
-              } 
-            />
-          </Routes>
+          <AppContent />
         </div>
       </Router>
     </AuthProvider>
+  );
+};
+
+const AppContent: React.FC = () => {
+  const { databaseAvailable } = useAuth();
+  
+  return (
+    <>
+      <DatabaseBanner databaseAvailable={databaseAvailable} />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/fitness" 
+          element={
+            <ProtectedRoute>
+              <FitnessPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/travel" 
+          element={
+            <ProtectedRoute>
+              <TravelPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/weather" 
+          element={
+            <ProtectedRoute>
+              <WeatherPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/accounting" 
+          element={
+            <ProtectedRoute>
+              <AccountingPage />
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+    </>
   );
 };
 

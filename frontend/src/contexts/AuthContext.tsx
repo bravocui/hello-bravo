@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (token: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  databaseAvailable: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [databaseAvailable, setDatabaseAvailable] = useState(true);
 
   useEffect(() => {
     // Only check auth once on mount
@@ -40,6 +42,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     const checkAuth = async () => {
       try {
+        // First check database status
+        try {
+          const healthResponse = await api.get('/health');
+          setDatabaseAvailable(healthResponse.data.database_available);
+        } catch (error) {
+          console.warn('Could not check database status:', error);
+          setDatabaseAvailable(false);
+        }
+        
+        // Then check user auth
         const response = await api.get('/user/profile');
         setUser(response.data);
       } catch (error) {
@@ -78,7 +90,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     login,
     logout,
-    loading
+    loading,
+    databaseAvailable
   };
 
   return (

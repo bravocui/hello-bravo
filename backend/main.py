@@ -10,6 +10,7 @@ from config import ALLOWED_ORIGINS
 # Import models and auth
 from models import User
 from auth import get_current_user, google_auth, logout, get_user_profile
+from auth_simple import google_auth_simple, logout_simple
 from database import get_db
 
 # Import feature routers
@@ -20,6 +21,44 @@ from features.ledger import router as ledger_router
 from features.users import router as users_router
 
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
+
+# Database connection status
+database_available = False
+
+# Test database connection on startup
+@app.on_event("startup")
+async def test_database_connection():
+    global database_available
+    try:
+        from sqlalchemy import create_engine, text
+        from config import DATABASE_URL
+        
+        print(f"Testing database connection to: {DATABASE_URL[:50]}...")
+        
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        with engine.connect() as connection:
+            # Test basic connection
+            result = connection.execute(text("SELECT 1"))
+            print("✅ Database connection successful!")
+            
+            # List all tables
+            result = connection.execute(text("""
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """))
+            
+            tables = [row[0] for row in result]
+            print(f"📋 Available tables: {tables}")
+            
+            database_available = True
+            print("✅ Database is available for authentication")
+            
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        print("⚠️  Falling back to simplified authentication (no database)")
+        database_available = False
 
 # Global exception handlers for better error messages
 @app.exception_handler(HTTPException)
@@ -66,11 +105,17 @@ app.include_router(users_router)
 # Auth endpoints
 @app.post("/auth/google")
 async def auth_google(token: dict, response: Response, db = Depends(get_db)):
-    return await google_auth(token, response, db)
+    if database_available:
+        return await google_auth(token, response, db)
+    else:
+        return await google_auth_simple(token, response)
 
 @app.post("/logout")
 async def auth_logout(response: Response):
-    return await logout(response)
+    if database_available:
+        return await logout(response)
+    else:
+        return await logout_simple(response)
 
 @app.get("/user/profile")
 async def user_profile(current_user: User = Depends(get_current_user)):
@@ -79,6 +124,14 @@ async def user_profile(current_user: User = Depends(get_current_user)):
 @app.get("/")
 async def root():
     return {"message": "Personal Life Tracking API", "version": "1.0.0"}
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "database_available": database_available,
+        "version": "1.0.0"
+    }
 
 # Catch-all route to serve React app for client-side routing
 @app.get("/{full_path:path}")
