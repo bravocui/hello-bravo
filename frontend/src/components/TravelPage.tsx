@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ArrowLeft, Plus, Calendar, Star, Image } from 'lucide-react';
+import { MapPin, Plus, Calendar, Star, Image } from 'lucide-react';
 import api from '../config/api';
+import Header from './Header';
 
 interface TravelEntry {
   id: number;
@@ -96,27 +97,12 @@ const TravelPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors mr-4"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="hidden sm:block">Back</span>
-            </button>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-travel-100 rounded-lg flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-travel-600" />
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Travel Log</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header 
+        title="Travel Log"
+        icon={MapPin}
+        iconColor="travel"
+        showBackButton={true}
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

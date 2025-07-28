@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Activity, MapPin, Cloud, DollarSign } from 'lucide-react';
+import { getVersionString } from '../config/version';
 
 declare global {
   interface Window {
@@ -70,6 +71,7 @@ const Login: React.FC = () => {
           <p className="text-gray-600 text-lg">
             Track your fitness, travels, and weather
           </p>
+          <p className="text-xs text-gray-500 mt-1">{getVersionString()}</p>
         </div>
 
         {/* Feature Preview */}

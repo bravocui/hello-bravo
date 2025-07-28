@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, ArrowLeft, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
+import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import api from '../config/api';
+import Header from './Header';
 
 interface LedgerEntry {
   id: number;
@@ -207,27 +208,12 @@ const AccountingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors mr-4"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="hidden sm:block">Back</span>
-            </button>
-            
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-accounting-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-accounting-600" />
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">Expense Tracker</h1>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header 
+        title="Expense Tracker"
+        icon={DollarSign}
+        iconColor="accounting"
+        showBackButton={true}
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

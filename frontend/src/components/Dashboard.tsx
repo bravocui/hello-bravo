@@ -1,16 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Activity, MapPin, Cloud, LogOut, DollarSign } from 'lucide-react';
+import { Activity, MapPin, Cloud, DollarSign } from 'lucide-react';
+import Header from './Header';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const { user } = useAuth();
 
   const categories = [
     {
@@ -53,38 +49,13 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Life Tracker</h1>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                {user?.picture && (
-                  <img 
-                    src={user.picture} 
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                )}
-                <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                  {user?.name}
-                </span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:block text-sm">Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header 
+        title="Life Tracker"
+        icon={Activity}
+        iconColor="gray"
+        showUserInfo={true}
+        showLogout={true}
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
