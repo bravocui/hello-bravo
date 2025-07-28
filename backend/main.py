@@ -10,6 +10,7 @@ load_dotenv()
 # Import models and auth
 from models import User
 from auth import get_current_user, google_auth, logout, get_user_profile
+from database import get_db
 
 # Import feature routers
 from features.fitness import router as fitness_router
@@ -47,8 +48,8 @@ app.include_router(users_router)
 
 # Auth endpoints
 @app.post("/auth/google")
-async def auth_google(token: dict, response: Response):
-    return await google_auth(token, response)
+async def auth_google(token: dict, response: Response, db = Depends(get_db)):
+    return await google_auth(token, response, db)
 
 @app.post("/logout")
 async def auth_logout(response: Response):
