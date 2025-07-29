@@ -15,7 +15,7 @@ steps:
       - 'push'
       - 'gcr.io/${PROJECT_ID}/hello-bravo-api'
 
-  # Step 3: Deploy the image to Cloud Run
+  # Step 3: Deploy the image to Cloud Run with Cloud SQL
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -32,24 +32,25 @@ steps:
       - '--port'
       - '8080'
       - '--memory'
-      - '512Mi'
+      - '1Gi'
       - '--cpu'
-      - '1'
+      - '2'
       - '--max-instances'
-      - '10'
+      - '20'
       - '--min-instances'
-      - '0'
+      - '1'
       - '--timeout'
       - '300'
       - '--concurrency'
       - '80'
-      # Uncomment and update if you have Cloud SQL instance
-      # - '--add-cloudsql-instances'
-      # - 'bravocui-site:us-central1:bravocuisite'
+      - '--add-cloudsql-instances'
+      - 'bravocui-site:us-central1:bravocuisite'
+      - '--set-env-vars'
+      - 'ENVIRONMENT=production'
 
 # Specify the images to be pushed to the registry
 images:
   - 'gcr.io/${PROJECT_ID}/hello-bravo-api'
 
 # Optional: Set timeout for the build
-timeout: '1200s'
+timeout: '1200s' 

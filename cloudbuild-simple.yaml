@@ -43,13 +43,10 @@ steps:
       - '300'
       - '--concurrency'
       - '80'
-      # Uncomment and update if you have Cloud SQL instance
-      # - '--add-cloudsql-instances'
-      # - 'bravocui-site:us-central1:bravocuisite'
 
 # Specify the images to be pushed to the registry
 images:
   - 'gcr.io/${PROJECT_ID}/hello-bravo-api'
 
 # Optional: Set timeout for the build
-timeout: '1200s'
+timeout: '1200s' 
