@@ -46,7 +46,7 @@ steps:
       - '--add-cloudsql-instances'
       - 'bravocui-site:us-central1:bravocuisite'
       - '--set-env-vars'
-      - 'ENVIRONMENT=production'
+      - 'ENVIRONMENT=production,DATABASE_URL=postgresql://your_db_user:your_db_password@/life_tracker?host=/cloudsql/bravocui-site:us-central1:bravocuisite,JWT_SECRET=your-super-secret-jwt-key-change-this-in-production,JWT_ALGORITHM=HS256,JWT_EXPIRE_MINUTES=10080,GOOGLE_CLIENT_ID=772654378329-jq959gvbsuier0oefumlte5ci6hdnsuf.apps.googleusercontent.com,ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000,GCS_BUCKET_NAME=bravocui-site,GCS_PREFIX=prod/'
 
 # Specify the images to be pushed to the registry
 images:
