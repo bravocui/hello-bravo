@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import api from '../config/api';
@@ -11,7 +11,7 @@ interface LedgerEntry {
   category: string;
   amount: number;
   credit_card: string;
-  owner: string;
+  user_name: string;
   notes?: string;
 }
 
@@ -20,18 +20,21 @@ const AccountingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<string>('all-time');
-  const [selectedOwner, setSelectedOwner] = useState<string>('all-owners');
+  const [selectedUser, setSelectedUser] = useState<string>('all-users');
   const [sortBy, setSortBy] = useState<'category' | 'amount' | 'percentage'>('amount');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedView, setSelectedView] = useState<'monthly-trend' | 'category-details' | 'credit-card-details'>('monthly-trend');
+  const [selectedView, setSelectedView] = useState<'monthly-trend' | 'category-details' | 'credit-card-details' | 'detailed-data'>('monthly-trend');
+  const [tableSortField, setTableSortField] = useState<'year' | 'month' | 'user_name' | 'credit_card' | 'category' | 'amount'>('year');
+  const [tableSortOrder, setTableSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [dataSource, setDataSource] = useState<'database' | 'mock'>('database');
 
-  useEffect(() => {
-    fetchLedgerData();
-  }, []);
-
-  const fetchLedgerData = async () => {
+  const fetchLedgerData = useCallback(async () => {
     try {
-      const response = await api.get('/ledger/entries');
+      setLoading(true);
+      setError(null);
+      
+      const endpoint = dataSource === 'database' ? '/ledger/entries' : '/ledger/mock-entries';
+      const response = await api.get(endpoint);
       setLedgerData(response.data);
     } catch (error) {
       console.error('Failed to fetch ledger data:', error);
@@ -39,7 +42,11 @@ const AccountingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dataSource]);
+
+  useEffect(() => {
+    fetchLedgerData();
+  }, [fetchLedgerData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -76,10 +83,19 @@ const AccountingPage: React.FC = () => {
     return '#6b7280'; // gray
   };
 
-  // Get unique owners for the selector
-  const uniqueOwners = useMemo(() => {
-    const owners = new Set(ledgerData.map(entry => entry.owner));
-    return Array.from(owners).sort();
+  const handleTableSort = (field: 'year' | 'month' | 'user_name' | 'credit_card' | 'category' | 'amount') => {
+    if (tableSortField === field) {
+      setTableSortOrder(tableSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setTableSortField(field);
+      setTableSortOrder('asc');
+    }
+  };
+
+  // Get unique users for the selector
+  const uniqueUsers = useMemo(() => {
+    const users = new Set(ledgerData.map(entry => entry.user_name));
+    return Array.from(users).sort();
   }, [ledgerData]);
 
   // Get unique years for the selector
@@ -111,15 +127,43 @@ const AccountingPage: React.FC = () => {
           }
       }
 
-      // Filter by owner
-      const ownerFilter = selectedOwner === 'all-owners' || entry.owner === selectedOwner;
+      // Filter by user
+      const userFilter = selectedUser === 'all-users' || entry.user_name === selectedUser;
 
-      return timeFilter && ownerFilter;
+      return timeFilter && userFilter;
     });
-  }, [ledgerData, timeRange, selectedOwner]);
+      }, [ledgerData, timeRange, selectedUser]);
 
   // Calculate expense summaries based on filtered data
   const totalExpenses = filteredData.reduce((sum, entry) => sum + entry.amount, 0);
+
+  // Sort table data
+  const sortedTableData = useMemo(() => {
+    const sorted = [...filteredData].sort((a, b) => {
+      let aValue: any = a[tableSortField];
+      let bValue: any = b[tableSortField];
+      
+      // Handle numeric fields
+      if (tableSortField === 'year' || tableSortField === 'month' || tableSortField === 'amount') {
+        aValue = Number(aValue);
+        bValue = Number(bValue);
+      }
+      
+      // Handle string fields
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+      
+      if (tableSortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+    
+    return sorted;
+  }, [filteredData, tableSortField, tableSortOrder]);
 
   const categoryTotals = filteredData.reduce((acc, entry) => {
     const category = entry.category;
@@ -216,7 +260,7 @@ const AccountingPage: React.FC = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filter Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-accounting-100 rounded-lg flex items-center justify-center">
@@ -224,21 +268,21 @@ const AccountingPage: React.FC = () => {
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-gray-600">Owner</p>
+                  <p className="text-sm font-medium text-gray-600">User</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {selectedOwner === 'all-owners' 
-                      ? `${new Set(filteredData.map(entry => entry.owner)).size} owners`
-                      : '1 owner'}
+                    {selectedUser === 'all-users' 
+                      ? `${new Set(filteredData.map(entry => entry.user_name)).size} users`
+                      : '1 user'}
                   </p>
                 </div>
                 <select
-                  value={selectedOwner}
-                  onChange={(e) => setSelectedOwner(e.target.value)}
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500 focus:border-transparent bg-white"
                 >
-                  <option value="all-owners">All Owners</option>
-                  {uniqueOwners.map(owner => (
-                    <option key={owner} value={owner}>{owner}</option>
+                  <option value="all-users">All Users</option>
+                  {uniqueUsers.map(user => (
+                    <option key={user} value={user}>{user}</option>
                   ))}
                 </select>
               </div>
@@ -269,6 +313,30 @@ const AccountingPage: React.FC = () => {
                   {uniqueYears.map(year => (
                     <option key={year} value={year.toString()}>{year}</option>
                   ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-accounting-100 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-accounting-600" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-gray-600">Data Source</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {dataSource === 'database' ? 'Database' : 'Mock Data'}
+                  </p>
+                </div>
+                <select
+                  value={dataSource}
+                  onChange={(e) => setDataSource(e.target.value as 'database' | 'mock')}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500 focus:border-transparent bg-white"
+                >
+                  <option value="database">Database</option>
+                  <option value="mock">Mock Data</option>
                 </select>
               </div>
             </div>
@@ -464,6 +532,16 @@ const AccountingPage: React.FC = () => {
               }`}
             >
               Credit Card Details
+            </button>
+            <button
+              onClick={() => setSelectedView('detailed-data')}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium ${
+                selectedView === 'detailed-data' 
+                  ? 'bg-accounting-600 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Show Detailed Data
             </button>
           </div>
         </div>
@@ -689,6 +767,126 @@ const AccountingPage: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+        )}
+
+        {/* Detailed Data Table */}
+        {selectedView === 'detailed-data' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center space-x-3 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Detailed Expense Data</h2>
+            <div className="w-8 h-8 bg-accounting-100 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-accounting-600" />
+            </div>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleTableSort('year')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Year</span>
+                      <span className="text-gray-400">
+                        {tableSortField === 'year' ? (tableSortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleTableSort('month')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Month</span>
+                      <span className="text-gray-400">
+                        {tableSortField === 'month' ? (tableSortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleTableSort('user_name')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>User</span>
+                      <span className="text-gray-400">
+                        {tableSortField === 'user_name' ? (tableSortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleTableSort('credit_card')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Credit Card</span>
+                      <span className="text-gray-400">
+                        {tableSortField === 'credit_card' ? (tableSortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleTableSort('category')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Category</span>
+                      <span className="text-gray-400">
+                        {tableSortField === 'category' ? (tableSortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleTableSort('amount')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Amount</span>
+                      <span className="text-gray-400">
+                        {tableSortField === 'amount' ? (tableSortOrder === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedTableData.map((entry) => (
+                  <tr key={entry.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {entry.year}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(entry.year, entry.month - 1).toLocaleDateString('en-US', { month: 'long' })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {entry.user_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {entry.credit_card}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center space-x-2">
+                        <span>{getCategoryIcon(entry.category)}</span>
+                        <span>{entry.category}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
+                      {formatCurrency(entry.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {sortedTableData.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No data available for the selected filters
+            </div>
+          )}
         </div>
         )}
 

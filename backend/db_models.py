@@ -70,7 +70,7 @@ class LedgerEntry(Base):
     category = Column(String(100), nullable=False)
     amount = Column(Float, nullable=False)
     credit_card = Column(String(100), nullable=False)
-    owner = Column(String(100), nullable=False)
+    user_name = Column(String(100), nullable=False)
     notes = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

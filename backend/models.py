@@ -48,5 +48,5 @@ class LedgerEntry(BaseModel):
     category: str
     amount: float
     credit_card: str
-    owner: str
+    user_name: str
     notes: Optional[str] = None 

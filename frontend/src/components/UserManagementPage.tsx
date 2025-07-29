@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, Save, X, User, Shield, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, User as UserIcon, Shield, Eye } from 'lucide-react';
 import Header from './Header';
 import api from '../config/api';
 
@@ -26,7 +25,6 @@ interface EditUserForm {
 }
 
 const UserManagementPage: React.FC = () => {
-  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,11 +115,11 @@ const UserManagementPage: React.FC = () => {
       case 'admin':
         return <Shield className="w-4 h-4 text-red-500" />;
       case 'regular':
-        return <User className="w-4 h-4 text-blue-500" />;
+        return <UserIcon className="w-4 h-4 text-blue-500" />;
       case 'readonly':
         return <Eye className="w-4 h-4 text-gray-500" />;
       default:
-        return <User className="w-4 h-4 text-gray-500" />;
+        return <UserIcon className="w-4 h-4 text-gray-500" />;
     }
   };
 
@@ -143,7 +141,7 @@ const UserManagementPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <Header 
           title="User Management" 
-          icon={User} 
+          icon={UserIcon} 
           iconColor="blue"
           showBackButton
           showUserInfo
@@ -162,7 +160,7 @@ const UserManagementPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <Header 
         title="User Management" 
-        icon={User} 
+        icon={UserIcon} 
         iconColor="blue"
         showBackButton
         showUserInfo
@@ -294,7 +292,7 @@ const UserManagementPage: React.FC = () => {
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <User className="w-5 h-5 text-gray-600" />
+                              <UserIcon className="w-5 h-5 text-gray-600" />
                             </div>
                           )}
                         </div>

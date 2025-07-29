@@ -8,7 +8,6 @@ import TravelPage from './components/TravelPage';
 import WeatherPage from './components/WeatherPage';
 import AccountingPage from './components/AccountingPage';
 import UserManagementPage from './components/UserManagementPage';
-import DatabaseBanner from './components/DatabaseBanner';
 import HealthStatusBar from './components/HealthStatusBar';
 import './index.css';
 
@@ -120,11 +119,8 @@ const App: React.FC = () => {
 };
 
 const AppContent: React.FC = () => {
-  const { databaseAvailable } = useAuth();
-  
   return (
     <>
-      <DatabaseBanner databaseAvailable={databaseAvailable} />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route 
