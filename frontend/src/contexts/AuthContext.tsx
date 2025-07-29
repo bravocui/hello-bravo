@@ -16,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   databaseAvailable: boolean;
   refreshDatabaseStatus: () => Promise<void>;
+  authToken: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [databaseAvailable, setDatabaseAvailable] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   // Function to check database status
   const checkDatabaseStatus = async () => {
@@ -48,6 +50,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.warn('Could not check database status:', error);
       setDatabaseAvailable(false);
+    }
+  };
+
+  // Function to set Authorization header
+  const setAuthHeader = (token: string | null) => {
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 Authorization header set');
+    } else {
+      delete api.defaults.headers.common['Authorization'];
+      console.log('🔑 Authorization header removed');
     }
   };
 
@@ -83,10 +96,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (token: string) => {
     try {
       const response = await api.post('/auth/google', { token });
-      const { user: userData } = response.data;
+      const { user: userData, token: authToken } = response.data;
       setUser(userData);
+      setAuthToken(authToken);
+      setAuthHeader(authToken);
+      console.log('🔑 Login successful, token stored');
     } catch (error) {
       setUser(null);
+      setAuthToken(null);
+      setAuthHeader(null);
       throw error;
     }
   };
@@ -98,6 +116,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Ignore errors on logout
     }
     setUser(null);
+    setAuthToken(null);
+    setAuthHeader(null);
   };
 
   const value: AuthContextType = {
@@ -107,7 +127,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     loading,
     databaseAvailable,
-    refreshDatabaseStatus: checkDatabaseStatus
+    refreshDatabaseStatus: checkDatabaseStatus,
+    authToken
   };
 
   return (

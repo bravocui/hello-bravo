@@ -14,14 +14,30 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// No request interceptor needed - cookies are sent automatically with withCredentials: true
-
-// Response interceptor for error handling (no redirects)
-api.interceptors.response.use(
-  (response) => response,
+// Request interceptor to log requests
+api.interceptors.request.use(
+  (config) => {
+    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    if (config.headers.Authorization) {
+      console.log('🔑 Authorization header present');
+    }
+    return config;
+  },
   (error) => {
-    // Just log the error, don't redirect
-    console.error('API Error:', error.response?.status, error.response?.data);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling and debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    console.error('❌ API Error:', error.response?.status, error.response?.data);
+    console.error('🔍 Request URL:', error.config?.url);
+    console.error('🔍 Request Method:', error.config?.method);
     return Promise.reject(error);
   }
 );

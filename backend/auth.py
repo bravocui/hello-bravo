@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Depends, Response, Cookie
+from fastapi import HTTPException, Depends, Response, Cookie, Header
 from jose import jwt, JWTError
 import requests
 from datetime import datetime, timedelta
@@ -70,23 +70,36 @@ def create_jwt(user: dict):
     to_encode = {"sub": user["email"], "exp": expire, "user": user}
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(session_token: str = Cookie(None), db: Session = Depends(get_db)) -> User:
-    """Get current user from JWT cookie"""
+async def get_current_user(
+    session_token: str = Cookie(None), 
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current user from JWT cookie or Authorization header"""
     print(f"🔐 Authentication Debug:")
     print(f"   Session token present: {session_token is not None}")
+    print(f"   Authorization header present: {authorization is not None}")
     print(f"   Session token length: {len(session_token) if session_token else 0}")
     print(f"   Session token preview: {session_token[:50] if session_token else 'None'}...")
     
-    if not session_token:
-        print("❌ No session token found in cookies")
+    # Try to get token from cookie first, then from Authorization header
+    token = session_token
+    if not token and authorization:
+        if authorization.startswith("Bearer "):
+            token = authorization[7:]  # Remove "Bearer " prefix
+            print(f"   Using Authorization header token")
+    
+    if not token:
+        print("❌ No session token found in cookies or Authorization header")
         print("🔍 This usually means:")
         print("   1. Cookies are not being sent by the browser")
         print("   2. SameSite policy is blocking the cookie")
         print("   3. Cookie domain/path is incorrect")
-        raise HTTPException(status_code=401, detail="Not authenticated (no cookie)")
+        print("   4. Authorization header not set")
+        raise HTTPException(status_code=401, detail="Not authenticated (no token)")
     
     try:
-        payload = jwt.decode(session_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_data = payload["user"]
         print(f"✅ JWT decoded successfully for user: {user_data.get('email', 'Unknown')}")
         
@@ -176,11 +189,12 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             "path": "/"  # Ensure cookie is sent to all paths
         }
         
-        # Set SameSite based on environment
+        # Set SameSite and domain based on environment
         if ENVIRONMENT == "production":
             # For production: cross-domain cookies
             cookie_kwargs.update({
-                "samesite": "lax"     # More compatible with mobile browsers
+                "samesite": "none",     # Allow cross-site cookies
+                "domain": ".us-central1.run.app",  # Set explicit domain for cross-subdomain
             })
         else:
             # For development: local cookies
@@ -196,7 +210,10 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
         print(f"   Secure: {cookie_kwargs.get('secure', 'Not set')}")
         print(f"   HttpOnly: {cookie_kwargs.get('httponly', 'Not set')}")
         print(f"   Max Age: {cookie_kwargs.get('max_age', 'Not set')}")
-        return {"user": jwt_user_data}
+        return {
+            "user": jwt_user_data,
+            "token": jwt_token  # Include token for frontend storage
+        }
         
     except HTTPException:
         # Re-raise HTTP exceptions (like from verify_google_token)
@@ -221,7 +238,8 @@ async def logout(response: Response):
     if ENVIRONMENT == "production":
         cookie_kwargs.update({
             "secure": True,
-            "samesite": "lax"
+            "samesite": "none",
+            "domain": None
         })
     
     response.delete_cookie(**cookie_kwargs)

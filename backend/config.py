@@ -8,6 +8,7 @@ def load_environment():
     """Load environment variables based on ENVIRONMENT setting"""
     environment = os.getenv("ENVIRONMENT", "development")
     
+    # Load environment file if it exists
     if environment == "production":
         env_file = ".env.production"
     elif environment == "development":
@@ -15,7 +16,14 @@ def load_environment():
     else:
         env_file = ".env"
     
-    load_dotenv(env_file)
+    # Try to load the environment file
+    if os.path.exists(env_file):
+        print(f"📁 Loading environment file: {env_file}")
+        load_dotenv(env_file)
+    else:
+        print(f"⚠️  Environment file not found: {env_file}")
+        print(f"🔧 Using environment variables from Cloud Run/System")
+    
     return environment
 
 # Load environment variables when module is imported
@@ -38,4 +46,10 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "https://bravocui.github.io,http:
 
 # GCS configuration
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "bravocui-site")
-GCS_PREFIX = os.getenv("GCS_PREFIX", "dev/") 
+GCS_PREFIX = os.getenv("GCS_PREFIX", "dev/")
+
+# Debug: Print configuration (without sensitive data)
+print(f"🔧 Environment: {ENVIRONMENT}")
+print(f"🌐 Database URL: {DATABASE_URL.split('@')[0]}@***")  # Hide password
+print(f"🔑 JWT Algorithm: {JWT_ALGORITHM}")
+print(f"🌍 Allowed Origins: {ALLOWED_ORIGINS}") 
