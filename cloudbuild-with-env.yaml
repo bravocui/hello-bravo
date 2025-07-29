@@ -1,5 +1,34 @@
 steps:
-  # Step 1: Build the Docker image
+  # Step 1: Create production environment file
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        cat > backend/.env.production << 'EOF'
+        # Production Environment Configuration
+        ENVIRONMENT=production
+
+        # Cloud SQL Database Configuration
+        DATABASE_URL=postgresql://prod_user:812-Galt-prod@/life_tracker?host=/cloudsql/bravocui-site:us-central1:bravocuisite
+        
+        # JWT Configuration
+        JWT_SECRET=IhrYyNjViGh9kGyLlVIDTsIUsf8X-SA2AF2-Zo3y7n0
+        JWT_ALGORITHM=HS256
+        JWT_EXPIRE_MINUTES=10080
+        
+        # Google OAuth Configuration
+        GOOGLE_CLIENT_ID=772654378329-jq959gvbsuier0oefumlte5ci6hdnsuf.apps.googleusercontent.com
+        
+        # CORS Configuration
+        ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
+        
+        # GCS Configuration
+        GCS_BUCKET_NAME=bravocui-site
+        GCS_PREFIX=prod/
+        EOF
+
+  # Step 2: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -9,13 +38,13 @@ steps:
       - 'backend/Dockerfile'
       - 'backend'
 
-  # Step 2: Push the Docker image to Artifact Registry
+  # Step 3: Push the Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'gcr.io/${PROJECT_ID}/hello-bravo-api'
 
-  # Step 3: Deploy the image to Cloud Run with Cloud SQL
+  # Step 4: Deploy the image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
@@ -45,6 +74,7 @@ steps:
       - '80'
       - '--add-cloudsql-instances'
       - 'bravocui-site:us-central1:bravocuisite'
+
 # Specify the images to be pushed to the registry
 images:
   - 'gcr.io/${PROJECT_ID}/hello-bravo-api'
