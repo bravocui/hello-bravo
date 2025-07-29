@@ -26,6 +26,29 @@ class User(Base):
     fitness_entries = relationship("FitnessEntry", back_populates="user")
     travel_entries = relationship("TravelEntry", back_populates="user")
     ledger_entries = relationship("LedgerEntry", back_populates="user")
+    credit_cards = relationship("CreditCard", back_populates="user")
+
+class CreditCard(Base):
+    __tablename__ = "credit_cards"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    owner = Column(String(255), nullable=False)
+    opening_time = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationship
+    user = relationship("User", back_populates="credit_cards")
+
+class SpendingCategory(Base):
+    __tablename__ = "spending_categories"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    category_name = Column(String(255), nullable=False, unique=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 class FitnessEntry(Base):
     __tablename__ = "fitness_entries"
