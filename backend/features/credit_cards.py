@@ -120,7 +120,7 @@ async def update_credit_card(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update a credit card"""
+    """Update a credit card and update all related ledger entries"""
     try:
         # Find the card - allow admin users to edit any card
         query = db.query(DBCreditCard).filter(DBCreditCard.id == card_id)
@@ -134,6 +134,9 @@ async def update_credit_card(
         if not db_card:
             raise HTTPException(status_code=404, detail="Credit card not found")
         
+        # Store the old card name for updating ledger entries
+        old_card_name = db_card.name
+        
         # Find the user by name (owner) if owner is being changed
         if card_update.owner != db_card.owner:
             db_user = db.query(DBUser).filter(DBUser.name == card_update.owner).first()
@@ -146,18 +149,33 @@ async def update_credit_card(
         db_card.owner = card_update.owner
         db_card.opening_time = card_update.opening_time
         
+        # Update all related ledger entries if card name changed
+        updated_count = 0
+        if old_card_name != card_update.name:
+            from db_models import LedgerEntry as DBLedgerEntry
+            affected_entries = db.query(DBLedgerEntry).filter(
+                DBLedgerEntry.credit_card == old_card_name
+            ).all()
+            
+            for entry in affected_entries:
+                entry.credit_card = card_update.name
+                updated_count += 1
+        
         db.commit()
         db.refresh(db_card)
         
-        return CreditCard(
-            id=db_card.id,
-            user_id=db_card.user_id,
-            name=db_card.name,
-            owner=db_card.owner,
-            opening_time=db_card.opening_time,
-            created_at=db_card.created_at,
-            updated_at=db_card.updated_at
-        )
+        return {
+            "card": CreditCard(
+                id=db_card.id,
+                user_id=db_card.user_id,
+                name=db_card.name,
+                owner=db_card.owner,
+                opening_time=db_card.opening_time,
+                created_at=db_card.created_at,
+                updated_at=db_card.updated_at
+            ),
+            "message": f"Credit card updated successfully. {updated_count} ledger entries were also updated." if updated_count > 0 else "Credit card updated successfully."
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -170,7 +188,7 @@ async def delete_credit_card(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete a credit card"""
+    """Delete a credit card - prevents deletion if related ledger entries exist"""
     try:
         # Find the card - allow admin users to delete any card
         query = db.query(DBCreditCard).filter(DBCreditCard.id == card_id)
@@ -183,6 +201,18 @@ async def delete_credit_card(
         
         if not db_card:
             raise HTTPException(status_code=404, detail="Credit card not found")
+        
+        # Check for related ledger entries
+        from db_models import LedgerEntry as DBLedgerEntry
+        related_entries = db.query(DBLedgerEntry).filter(
+            DBLedgerEntry.credit_card == db_card.name
+        ).count()
+        
+        if related_entries > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot delete credit card '{db_card.name}' because it has {related_entries} related ledger entries. Please rename the card instead of deleting it."
+            )
         
         db.delete(db_card)
         db.commit()

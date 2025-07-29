@@ -102,7 +102,7 @@ async def update_spending_category(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update a spending category"""
+    """Update a spending category and update all related ledger entries"""
     try:
         # Check if new name already exists
         existing_category = db.query(DBSpendingCategory).filter(
@@ -121,18 +121,36 @@ async def update_spending_category(
         if not db_category:
             raise HTTPException(status_code=404, detail="Spending category not found")
         
+        # Store the old category name for updating ledger entries
+        old_category_name = db_category.category_name
+        new_category_name = category_update.category_name
+        
         # Update the category
-        db_category.category_name = category_update.category_name
+        db_category.category_name = new_category_name
+        
+        # Update all related ledger entries
+        from db_models import LedgerEntry as DBLedgerEntry
+        affected_entries = db.query(DBLedgerEntry).filter(
+            DBLedgerEntry.category == old_category_name
+        ).all()
+        
+        updated_count = 0
+        for entry in affected_entries:
+            entry.category = new_category_name
+            updated_count += 1
         
         db.commit()
         db.refresh(db_category)
         
-        return SpendingCategory(
-            id=db_category.id,
-            category_name=db_category.category_name,
-            created_at=db_category.created_at,
-            updated_at=db_category.updated_at
-        )
+        return {
+            "category": SpendingCategory(
+                id=db_category.id,
+                category_name=db_category.category_name,
+                created_at=db_category.created_at,
+                updated_at=db_category.updated_at
+            ),
+            "message": f"Category updated successfully. {updated_count} ledger entries were also updated."
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -145,7 +163,7 @@ async def delete_spending_category(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete a spending category"""
+    """Delete a spending category - prevents deletion if related ledger entries exist"""
     try:
         db_category = db.query(DBSpendingCategory).filter(
             DBSpendingCategory.id == category_id
@@ -153,6 +171,18 @@ async def delete_spending_category(
         
         if not db_category:
             raise HTTPException(status_code=404, detail="Spending category not found")
+        
+        # Check for related ledger entries
+        from db_models import LedgerEntry as DBLedgerEntry
+        related_entries = db.query(DBLedgerEntry).filter(
+            DBLedgerEntry.category == db_category.category_name
+        ).count()
+        
+        if related_entries > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cannot delete category '{db_category.category_name}' because it has {related_entries} related ledger entries. Please rename the category instead of deleting it."
+            )
         
         db.delete(db_category)
         db.commit()
