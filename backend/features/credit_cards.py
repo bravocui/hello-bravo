@@ -153,13 +153,15 @@ async def update_credit_card(
         updated_count = 0
         if old_card_name != card_update.name:
             from db_models import LedgerEntry as DBLedgerEntry
-            affected_entries = db.query(DBLedgerEntry).filter(
-                DBLedgerEntry.credit_card == old_card_name
-            ).all()
             
-            for entry in affected_entries:
-                entry.credit_card = card_update.name
-                updated_count += 1
+            # Use a single UPDATE query instead of iterating
+            result = db.query(DBLedgerEntry).filter(
+                DBLedgerEntry.credit_card == old_card_name
+            ).update(
+                {DBLedgerEntry.credit_card: card_update.name},
+                synchronize_session=False
+            )
+            updated_count = result
         
         db.commit()
         db.refresh(db_card)
@@ -180,6 +182,8 @@ async def update_credit_card(
         raise
     except Exception as e:
         db.rollback()
+        print(f"❌ Error updating credit card: {e}")
+        print(f"🔍 Error type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=f"Failed to update credit card: {str(e)}")
 
 @router.delete("/{card_id}")

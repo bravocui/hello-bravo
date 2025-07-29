@@ -128,16 +128,17 @@ async def update_spending_category(
         # Update the category
         db_category.category_name = new_category_name
         
-        # Update all related ledger entries
+        # Update all related ledger entries efficiently
         from db_models import LedgerEntry as DBLedgerEntry
-        affected_entries = db.query(DBLedgerEntry).filter(
-            DBLedgerEntry.category == old_category_name
-        ).all()
         
-        updated_count = 0
-        for entry in affected_entries:
-            entry.category = new_category_name
-            updated_count += 1
+        # Use a single UPDATE query instead of iterating
+        result = db.query(DBLedgerEntry).filter(
+            DBLedgerEntry.category == old_category_name
+        ).update(
+            {DBLedgerEntry.category: new_category_name},
+            synchronize_session=False
+        )
+        updated_count = result
         
         db.commit()
         db.refresh(db_category)
@@ -155,6 +156,8 @@ async def update_spending_category(
         raise
     except Exception as e:
         db.rollback()
+        print(f"❌ Error updating spending category: {e}")
+        print(f"🔍 Error type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=f"Failed to update spending category: {str(e)}")
 
 @router.delete("/{category_id}")

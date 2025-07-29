@@ -18,7 +18,12 @@ try:
         DATABASE_URL,
         pool_pre_ping=True,  # Enable connection health checks
         pool_recycle=300,    # Recycle connections after 5 minutes
-        connect_args={"connect_timeout": 10}  # 10 second timeout
+        pool_timeout=30,     # Wait up to 30 seconds for a connection
+        max_overflow=10,     # Allow up to 10 additional connections
+        connect_args={
+            "connect_timeout": 10,  # 10 second timeout
+            "application_name": "hello-bravo-backend"  # Identify connections
+        }
     )
     print("✅ SQLAlchemy engine created successfully")
 except Exception as e:
@@ -41,18 +46,19 @@ print("✅ SQLAlchemy Base class created")
 def get_db():
     db = SessionLocal()
     try:
-        print("🔗 Database session created")
         yield db
     except Exception as e:
         print(f"❌ Database session error: {e}")
         print(f"🔗 Database URL: {DATABASE_URL}")
         print(f"🔍 Error type: {type(e).__name__}")
         print(f"🔍 Error details: {str(e)}")
-        db.rollback()
+        try:
+            db.rollback()
+        except Exception as rollback_error:
+            print(f"⚠️ Error during rollback: {rollback_error}")
         raise
     finally:
         try:
             db.close()
-            print("🔗 Database session closed")
         except Exception as close_error:
             print(f"⚠️ Error closing database session: {close_error}") 
