@@ -8,6 +8,9 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Check if user is a guest (has guest token)
+  const isGuest = user?.email?.includes('guest') || user?.name?.includes('Guest');
+
   const categories = [
     {
       id: 'fitness',
@@ -44,8 +47,14 @@ const Dashboard: React.FC = () => {
       color: 'accounting',
       path: '/accounting',
       stats: 'Expense tracking',
+      restrictedForGuests: true, // Hide for guests
     },
   ];
+
+  // Filter categories based on user type
+  const availableCategories = categories.filter(category => 
+    !category.restrictedForGuests || !isGuest
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -67,11 +76,18 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600">
             Choose a category to start tracking your life
           </p>
+          {isGuest && (
+            <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                🎭 You're logged in as a guest. Some features are limited. Contact admin for full access.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Category Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.map((category) => {
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${isGuest ? '3' : '4'} gap-6`}>
+          {availableCategories.map((category) => {
             const IconComponent = category.icon;
             return (
               <div
@@ -154,8 +170,6 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-          
-
         </div>
       </main>
     </div>

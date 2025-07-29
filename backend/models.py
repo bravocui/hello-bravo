@@ -7,6 +7,7 @@ class UserRole(str, Enum):
     ADMIN = "admin"
     REGULAR = "regular"
     READONLY = "readonly"
+    GUEST = "guest"
 
 class User(BaseModel):
     id: Optional[int] = None

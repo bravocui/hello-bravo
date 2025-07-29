@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Activity, MapPin, Cloud, DollarSign } from 'lucide-react';
+import { Activity, MapPin, Cloud, DollarSign, User } from 'lucide-react';
 import { getVersionString } from '../config/version';
 
 declare global {
@@ -27,21 +27,25 @@ const Login: React.FC = () => {
       navigate('/');
     } catch (error) {
       console.error('Login failed:', error);
-      // Show more detailed error message
+      // Check if it's a new user error
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Login failed: ${errorMessage}`);
+      if (errorMessage.includes('Login as guest') || errorMessage.includes('contact admin')) {
+        alert('Login as guest. Please contact admin to add you as user.');
+      } else {
+        alert(`Login failed: ${errorMessage}`);
+      }
     }
   }, [login, navigate]);
 
-  const handleDemoLogin = useCallback(async () => {
+  const handleGuestLogin = useCallback(async () => {
     try {
-      // Create a fake demo token
-      const demoToken = 'demo-token-' + Date.now();
-      await login(demoToken);
+      // Create a guest token
+      const guestToken = 'guest-token-' + Date.now();
+      await login(guestToken);
       navigate('/');
     } catch (error) {
-      console.error('Demo login failed:', error);
-      alert('Demo login failed. Please try again.');
+      console.error('Guest login failed:', error);
+      alert('Guest login failed. Please try again.');
     }
   }, [login, navigate]);
 
@@ -90,7 +94,7 @@ const Login: React.FC = () => {
 
         {/* Feature Preview */}
         <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
-          <div className="grid grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-3 gap-4 text-center">
             <div className="flex flex-col items-center space-y-2">
               <div className="w-12 h-12 bg-fitness-100 rounded-lg flex items-center justify-center">
                 <Activity className="w-6 h-6 text-fitness-600" />
@@ -109,12 +113,6 @@ const Login: React.FC = () => {
               </div>
               <span className="text-sm font-medium text-gray-700">Weather</span>
             </div>
-            <div className="flex flex-col items-center space-y-2">
-              <div className="w-12 h-12 bg-accounting-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-accounting-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">Accounting</span>
-            </div>
           </div>
         </div>
 
@@ -129,22 +127,23 @@ const Login: React.FC = () => {
             </p>
           </div>
 
-          {/* Google Login Button */}
+          {/* Login Buttons */}
           <div className="space-y-4">
             <div id="google-login-button" className="w-full"></div>
             
-            {/* Demo Login Button (for development) */}
+            {/* Guest Login Button */}
             <button
-              onClick={() => handleDemoLogin()}
-              className="w-full bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
+              onClick={() => handleGuestLogin()}
+              className="w-full bg-gray-600 hover:bg-gray-500 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
             >
-              <span>Demo Login (Development)</span>
+              <User className="w-4 h-4" />
+              <span>Login as Guest</span>
             </button>
           </div>
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              By signing in, you agree to our terms of service and privacy policy
+              Guest users have limited access. Contact admin for full access.
             </p>
           </div>
         </div>

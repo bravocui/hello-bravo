@@ -103,7 +103,23 @@ async def get_current_user(
         user_data = payload["user"]
         print(f"✅ JWT decoded successfully for user: {user_data.get('email', 'Unknown')}")
         
-        # Get fresh user data from database
+        # Check if this is a guest user
+        is_guest = (user_data.get('email', '').startswith('guest-') or 
+                   user_data.get('role') == 'guest' or
+                   user_data.get('id') == 0)
+        
+        if is_guest:
+            print(f"🎭 Guest user detected: {user_data.get('email', 'Unknown')}")
+            # Return guest user without database lookup
+            return User(
+                id=0,
+                email=user_data.get('email', ''),
+                name=user_data.get('name', 'Guest User'),
+                picture=user_data.get('picture'),
+                role=user_data.get('role', 'guest')
+            )
+        
+        # For regular users, get fresh user data from database
         try:
             db_user = UserService.get_user_by_id(db, user_data["id"])
             if not db_user:
@@ -145,36 +161,58 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
     try:
         token_value = token.get("token", "")
         
-        # Demo login
-        if token_value.startswith('demo-token-'):
-            user_data = MOCK_USERS["demo-token"]
+        # Guest login
+        if token_value.startswith('guest-token-'):
+            user_data = {
+                "email": f"guest-{datetime.now().timestamp()}@example.com",
+                "name": "Guest User",
+                "picture": None,
+                "role": "guest"
+            }
         else:
             user_data = await verify_google_token(token_value)
         
-        # Get or create user in database
-        try:
-            db_user = UserService.get_or_create_user(db, user_data)
-        except Exception as db_error:
-            # Check if it's a connection error
-            error_str = str(db_error).lower()
-            if any(keyword in error_str for keyword in ['timeout', 'connection', 'network', 'unreachable']):
-                # Database is unavailable - return error with specific message
-                raise HTTPException(
-                    status_code=503, 
-                    detail="Database is currently unavailable. Please try again later."
-                )
-            else:
-                # Other database errors
-                error_msg = f"Database error during login: {str(db_error)}"
-                raise HTTPException(status_code=500, detail=error_msg)
+        # For Google login, check if user exists in database
+        if not token_value.startswith('guest-token-'):
+            try:
+                # Check if user exists
+                existing_user = UserService.get_user_by_email(db, user_data["email"])
+                if not existing_user:
+                    # New user - don't add to database, show message
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Login as guest. Please contact admin to add you as user."
+                    )
+                
+                # User exists, use their data
+                db_user = existing_user
+                user_data = {
+                    "email": db_user.email,
+                    "name": db_user.name,
+                    "picture": db_user.picture_url,
+                    "role": db_user.role.value
+                }
+            except Exception as db_error:
+                # Check if it's a connection error
+                error_str = str(db_error).lower()
+                if any(keyword in error_str for keyword in ['timeout', 'connection', 'network', 'unreachable']):
+                    # Database is unavailable - return error with specific message
+                    raise HTTPException(
+                        status_code=503, 
+                        detail="Database is currently unavailable. Please try again later."
+                    )
+                else:
+                    # Other database errors
+                    error_msg = f"Database error during login: {str(db_error)}"
+                    raise HTTPException(status_code=500, detail=error_msg)
         
-        # Create JWT with database user ID
+        # Create JWT with user data
         jwt_user_data = {
-            "email": db_user.email,
-            "name": db_user.name,
-            "picture": db_user.picture_url,
-            "id": db_user.id,
-            "role": db_user.role.value
+            "email": user_data["email"],
+            "name": user_data["name"],
+            "picture": user_data.get("picture"),
+            "id": user_data.get("id", 0),
+            "role": user_data["role"]
         }
         
         jwt_token = create_jwt(jwt_user_data)

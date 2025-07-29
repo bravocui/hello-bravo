@@ -58,6 +58,55 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Guest Route component - blocks guest users
+const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Check if user is guest
+  const isGuest = user?.email?.includes('guest') || user?.name?.includes('Guest') || user?.role === 'guest';
+  if (isGuest) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
+          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🎭</span>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Feature Not Available
+          </h2>
+          <p className="text-gray-600 mb-6">
+            This feature is not available for guest users. Please contact an administrator to get full access.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   return (
     <AuthProvider>      
@@ -113,9 +162,9 @@ const AppContent: React.FC = () => {
         <Route 
           path="/accounting" 
           element={
-            <ProtectedRoute>
+            <GuestRoute>
               <AccountingPage />
-            </ProtectedRoute>
+            </GuestRoute>
           } 
         />
         <Route 
