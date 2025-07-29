@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -38,7 +39,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    # Use DATABASE_FOR_ALEMBIC environment variable if available, otherwise fall back to config
+    url = os.getenv("DATABASE_FOR_ALEMBIC") or config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -57,6 +59,16 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Use DATABASE_FOR_ALEMBIC environment variable if available
+    database_url = os.getenv("DATABASE_FOR_ALEMBIC")
+    
+    if database_url:
+        # Override the config with the environment variable
+        config.set_main_option("sqlalchemy.url", database_url)
+        print(f"🔧 Using DATABASE_FOR_ALEMBIC: {database_url}")
+    else:
+        print("⚠️ DATABASE_FOR_ALEMBIC not set, using default config")
+    
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
