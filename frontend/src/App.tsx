@@ -7,7 +7,7 @@ import FitnessPage from './components/FitnessPage';
 import TravelPage from './components/TravelPage';
 import WeatherPage from './components/WeatherPage';
 import AccountingPage from './components/AccountingPage';
-import UserManagementPage from './components/UserManagementPage';
+import AdminPortal from './components/AdminPortal';
 import HealthStatusBar from './components/HealthStatusBar';
 import './index.css';
 
@@ -167,7 +167,7 @@ const AppContent: React.FC = () => {
           path="/user-management" 
           element={
             <AdminRoute>
-              <UserManagementPage />
+              <AdminPortal />
             </AdminRoute>
           } 
         />

@@ -6,8 +6,12 @@ from auth import get_current_user
 from database import get_db
 from db_models import LedgerEntry as DBLedgerEntry
 from mock_data import MOCK_LEDGER_DATA
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/ledger", tags=["ledger"])
+
+class BatchLedgerEntryRequest(BaseModel):
+    entries: List[LedgerEntry]
 
 @router.get("/entries")
 async def get_ledger_entries(
@@ -57,6 +61,21 @@ async def create_ledger_entry(
         if not db_user:
             raise HTTPException(status_code=400, detail=f"User '{entry.user_name}' not found")
         
+        # Check for existing entry with same key tuple
+        existing_entry = db.query(DBLedgerEntry).filter(
+            DBLedgerEntry.year == entry.year,
+            DBLedgerEntry.month == entry.month,
+            DBLedgerEntry.user_name == entry.user_name,
+            DBLedgerEntry.credit_card == entry.credit_card,
+            DBLedgerEntry.category == entry.category
+        ).first()
+        
+        if existing_entry:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"An entry for {entry.category} already exists for {entry.year}/{entry.month:02d}, {entry.user_name}, {entry.credit_card} (existing amount: ${existing_entry.amount:.2f}). Please edit the existing entry instead."
+            )
+        
         # Create new database entry
         db_entry = DBLedgerEntry(
             user_id=db_user.id,
@@ -89,6 +108,116 @@ async def create_ledger_entry(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create ledger entry: {str(e)}")
+
+@router.post("/entries/batch")
+async def create_ledger_entries_batch(
+    batch_request: BatchLedgerEntryRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create multiple ledger entries in a single transaction"""
+    try:
+        from services.user_service import UserService
+        
+        # Log the entries being attempted
+        print(f"🔍 Attempting to create {len(batch_request.entries)} entries:")
+        for entry in batch_request.entries:
+            print(f"  - {entry.category}: ${entry.amount:.2f}")
+        
+        # Validate all entries first and check for duplicates
+        created_entries = []
+        duplicate_entries = []
+        
+        for entry in batch_request.entries:
+            # Find the user by name to get the correct user_id
+            db_user = UserService.get_user_by_name(db, entry.user_name)
+            
+            if not db_user:
+                raise HTTPException(status_code=400, detail=f"User '{entry.user_name}' not found")
+            
+            # Check for existing entry with same key tuple
+            existing_entry = db.query(DBLedgerEntry).filter(
+                DBLedgerEntry.year == entry.year,
+                DBLedgerEntry.month == entry.month,
+                DBLedgerEntry.user_name == entry.user_name,
+                DBLedgerEntry.credit_card == entry.credit_card,
+                DBLedgerEntry.category == entry.category
+            ).first()
+            
+            if existing_entry:
+                duplicate_entries.append({
+                    "year": entry.year,
+                    "month": entry.month,
+                    "user_name": entry.user_name,
+                    "credit_card": entry.credit_card,
+                    "category": entry.category,
+                    "existing_amount": existing_entry.amount
+                })
+            else:
+                # Create new database entry
+                db_entry = DBLedgerEntry(
+                    user_id=db_user.id,
+                    year=entry.year,
+                    month=entry.month,
+                    category=entry.category,
+                    amount=entry.amount,
+                    credit_card=entry.credit_card,
+                    user_name=entry.user_name,
+                    notes=entry.notes
+                )
+                
+                db.add(db_entry)
+                created_entries.append(db_entry)
+        
+        # If there are duplicates, return error with details
+        if duplicate_entries:
+            # Get the categories that were actually being attempted
+            attempted_categories = [entry.category for entry in batch_request.entries]
+            duplicate_categories = [dup['category'] for dup in duplicate_entries]
+            
+            print(f"❌ Found {len(duplicate_entries)} duplicate entries:")
+            for dup in duplicate_entries:
+                print(f"  - {dup['category']}: existing amount ${dup['existing_amount']:.2f}")
+            
+            duplicate_details = []
+            for dup in duplicate_entries:
+                duplicate_details.append(
+                    f"{dup['year']}/{dup['month']:02d}, {dup['user_name']}, {dup['credit_card']}, {dup['category']} (existing amount: ${dup['existing_amount']:.2f})"
+                )
+            
+            # Create a more helpful error message
+            error_message = f"The following categories already have entries for {batch_request.entries[0].year}/{batch_request.entries[0].month:02d}, {batch_request.entries[0].user_name}, {batch_request.entries[0].credit_card}: {', '.join(duplicate_categories)}. Please edit the existing entries instead."
+            
+            raise HTTPException(
+                status_code=409,
+                detail=error_message
+            )
+        
+        # Commit all entries in a single transaction
+        db.commit()
+        
+        # Refresh all entries and return them
+        result_entries = []
+        for db_entry in created_entries:
+            db.refresh(db_entry)
+            result_entries.append(LedgerEntry(
+                id=db_entry.id,
+                year=db_entry.year,
+                month=db_entry.month,
+                category=db_entry.category,
+                amount=db_entry.amount,
+                credit_card=db_entry.credit_card,
+                user_name=db_entry.user_name,
+                notes=db_entry.notes
+            ))
+        
+        return result_entries
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create ledger entries: {str(e)}")
 
 @router.get("/entries/{entry_id}")
 async def get_ledger_entry(

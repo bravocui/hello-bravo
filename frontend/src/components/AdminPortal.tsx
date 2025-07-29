@@ -61,7 +61,7 @@ interface EditSpendingCategoryForm {
   category_name: string;
 }
 
-const UserManagementPage: React.FC = () => {
+const AdminPortal: React.FC = () => {
   // Users state
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -433,10 +433,9 @@ const UserManagementPage: React.FC = () => {
             </div>
             <button
               onClick={() => setShowCreateUserForm(true)}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              className="flex items-center bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Add User</span>
             </button>
           </div>
 
@@ -596,17 +595,15 @@ const UserManagementPage: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => startEditingUser(user)}
-                            className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                            className="flex items-center px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
                           >
                             <Edit className="w-3 h-3" />
-                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id)}
-                            className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
+                            className="flex items-center px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
                           >
                             <Trash2 className="w-3 h-3" />
-                            <span>Delete</span>
                           </button>
                         </div>
                       )}
@@ -619,9 +616,9 @@ const UserManagementPage: React.FC = () => {
         </div>
 
         {/* Credit Cards and Spending Categories Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Credit Cards Block */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
                 <h2 className="text-lg font-semibold text-gray-900">Credit Cards</h2>
@@ -631,10 +628,9 @@ const UserManagementPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowCreateCreditCardForm(true)}
-                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                className="flex items-center bg-green-600 text-white p-2 rounded-md hover:bg-green-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Credit Card</span>
               </button>
             </div>
 
@@ -769,20 +765,18 @@ const UserManagementPage: React.FC = () => {
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => startEditingCreditCard(card)}
-                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                              <Edit className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCreditCard(card.id)}
-                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete</span>
-                            </button>
+                                                         <button
+                               onClick={() => startEditingCreditCard(card)}
+                               className="flex items-center px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                             >
+                               <Edit className="w-3 h-3" />
+                             </button>
+                             <button
+                               onClick={() => handleDeleteCreditCard(card.id)}
+                               className="flex items-center px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
+                             >
+                               <Trash2 className="w-3 h-3" />
+                             </button>
                           </div>
                         )}
                       </td>
@@ -804,10 +798,9 @@ const UserManagementPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowCreateSpendingCategoryForm(true)}
-                className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                className="flex items-center bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Category</span>
               </button>
             </div>
 
@@ -890,20 +883,18 @@ const UserManagementPage: React.FC = () => {
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => startEditingSpendingCategory(category)}
-                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
-                            >
-                              <Edit className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSpendingCategory(category.id)}
-                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              <span>Delete</span>
-                            </button>
+                                                         <button
+                               onClick={() => startEditingSpendingCategory(category)}
+                               className="flex items-center px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                             >
+                               <Edit className="w-3 h-3" />
+                             </button>
+                             <button
+                               onClick={() => handleDeleteSpendingCategory(category.id)}
+                               className="flex items-center px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
+                             >
+                               <Trash2 className="w-3 h-3" />
+                             </button>
                           </div>
                         )}
                       </td>
@@ -919,4 +910,4 @@ const UserManagementPage: React.FC = () => {
   );
 };
 
-export default UserManagementPage; 
+export default AdminPortal; 
