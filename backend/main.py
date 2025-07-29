@@ -145,6 +145,28 @@ async def auth_logout(response: Response):
 async def user_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
+@app.get("/debug/cookies")
+async def debug_cookies(request: Request):
+    """Debug endpoint to check cookies"""
+    cookies = request.cookies
+    headers = dict(request.headers)
+    
+    print("🍪 Cookie Debug Information:")
+    print(f"   Request URL: {request.url}")
+    print(f"   Cookies received: {cookies}")
+    print(f"   Origin: {headers.get('origin', 'Not set')}")
+    print(f"   Referer: {headers.get('referer', 'Not set')}")
+    print(f"   User-Agent: {headers.get('user-agent', 'Not set')}")
+    
+    return JSONResponse({
+        "cookies": dict(cookies),
+        "headers": {
+            "origin": headers.get('origin'),
+            "referer": headers.get('referer'),
+            "user_agent": headers.get('user-agent')
+        }
+    })
+
 @app.get("/")
 async def root():
     return {"message": "Personal Life Tracking API", "version": "1.0.0"}

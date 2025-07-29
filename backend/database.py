@@ -46,6 +46,8 @@ def get_db():
     except Exception as e:
         print(f"❌ Database session error: {e}")
         print(f"🔗 Database URL: {DATABASE_URL}")
+        print(f"🔍 Error type: {type(e).__name__}")
+        print(f"🔍 Error details: {str(e)}")
         db.rollback()
         raise
     finally:

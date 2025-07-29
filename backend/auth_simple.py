@@ -4,7 +4,7 @@ Simplified auth module for testing without database
 from fastapi import HTTPException, Response
 from datetime import datetime, timedelta
 from jose import jwt
-from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, JWT_COOKIE_NAME
+from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, JWT_COOKIE_NAME, ENVIRONMENT
 
 def create_jwt(user: dict):
     """Create JWT token for user"""
@@ -42,15 +42,28 @@ async def google_auth_simple(token: dict, response: Response):
         
         jwt_token = create_jwt(jwt_user_data)
         
-        # Set secure, HTTP-only cookie
-        response.set_cookie(
-            key=JWT_COOKIE_NAME,
-            value=jwt_token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=JWT_EXPIRE_MINUTES*60
-        )
+        # Configure cookie settings based on environment
+        cookie_kwargs = {
+            "key": JWT_COOKIE_NAME,
+            "value": jwt_token,
+            "httponly": True,
+            "secure": True,
+            "max_age": JWT_EXPIRE_MINUTES * 60,
+            "path": "/"  # Ensure cookie is sent to all paths
+        }
+        # Set SameSite based on environment
+        if ENVIRONMENT == "production":
+            # For production: cross-domain cookies
+            cookie_kwargs.update({
+                "samesite": "none"     # Required for cross-domain in production
+            })
+        else:
+            # For development: local cookies
+            cookie_kwargs.update({
+                "samesite": "lax"
+            })
+        
+        response.set_cookie(**cookie_kwargs)
         return {"user": jwt_user_data}
         
     except Exception as e:
@@ -58,5 +71,17 @@ async def google_auth_simple(token: dict, response: Response):
 
 async def logout_simple(response: Response):
     """Handle user logout"""
-    response.delete_cookie(JWT_COOKIE_NAME)
+    # Configure cookie deletion based on environment
+    cookie_kwargs = {
+        "key": JWT_COOKIE_NAME,
+        "path": "/"  # Ensure cookie is deleted from all paths
+    }
+    
+    if ENVIRONMENT == "production":
+        cookie_kwargs.update({
+            "secure": True,
+            "samesite": "none"
+        })
+    
+    response.delete_cookie(**cookie_kwargs)
     return {"message": "Logged out"} 
