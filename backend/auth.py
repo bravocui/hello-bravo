@@ -9,6 +9,7 @@ import base64
 import os
 from sqlalchemy.orm import Session
 from models import User
+from db_models import UserRole
 from mock_data import MOCK_USERS
 from database import get_db
 from services.user_service import UserService
@@ -105,7 +106,7 @@ async def get_current_user(
         
         # Check if this is a guest user
         is_guest = (user_data.get('email', '').startswith('guest-') or 
-                   user_data.get('role') == 'guest' or
+                   user_data.get('role') == UserRole.GUEST or
                    user_data.get('id') == 0)
         
         if is_guest:
@@ -116,7 +117,7 @@ async def get_current_user(
                 email=user_data.get('email', ''),
                 name=user_data.get('name', 'Guest User'),
                 picture=user_data.get('picture'),
-                role=user_data.get('role', 'guest')
+                role=user_data.get('role', UserRole.GUEST)
             )
         
         # For regular users, get fresh user data from database
@@ -167,7 +168,7 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
                 "email": f"guest-{datetime.now().timestamp()}@example.com",
                 "name": "Guest User",
                 "picture": None,
-                "role": "guest"
+                "role": UserRole.GUEST
             }
         else:
             user_data = await verify_google_token(token_value)

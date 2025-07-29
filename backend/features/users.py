@@ -31,7 +31,7 @@ class UserResponse(BaseModel):
 # Admin-only decorator
 def require_admin(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Check if current user is admin"""
-    if not current_user.role or current_user.role != "admin":
+    if not current_user.role or current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admin access required")
     
     # Get the full user object from database to get the ID

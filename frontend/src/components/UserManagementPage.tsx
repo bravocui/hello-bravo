@@ -33,11 +33,11 @@ const UserManagementPage: React.FC = () => {
   const [createForm, setCreateForm] = useState<CreateUserForm>({
     email: '',
     name: '',
-    role: 'regular'
+    role: 'REGULAR'
   });
   const [editForm, setEditForm] = useState<EditUserForm>({
     name: '',
-    role: 'regular'
+    role: 'REGULAR'
   });
 
   useEffect(() => {
@@ -101,22 +101,22 @@ const UserManagementPage: React.FC = () => {
     setEditingUser(user.id);
     setEditForm({
       name: user.name,
-      role: user.role
+      role: user.role.toUpperCase()
     });
   };
 
   const cancelEditing = () => {
     setEditingUser(null);
-    setEditForm({ name: '', role: 'regular' });
+    setEditForm({ name: '', role: 'REGULAR' });
   };
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return <Shield className="w-4 h-4 text-red-500" />;
-      case 'regular':
+      case 'REGULAR':
         return <UserIcon className="w-4 h-4 text-blue-500" />;
-      case 'readonly':
+      case 'READONLY':
         return <Eye className="w-4 h-4 text-gray-500" />;
       default:
         return <UserIcon className="w-4 h-4 text-gray-500" />;
@@ -125,11 +125,11 @@ const UserManagementPage: React.FC = () => {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return 'bg-red-100 text-red-800';
-      case 'regular':
+      case 'REGULAR':
         return 'bg-blue-100 text-blue-800';
-      case 'readonly':
+      case 'READONLY':
         return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -228,9 +228,9 @@ const UserManagementPage: React.FC = () => {
                     onChange={(e) => setCreateForm({...createForm, role: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="regular">Regular</option>
-                    <option value="admin">Admin</option>
-                    <option value="readonly">Read Only</option>
+                    <option value="REGULAR">Regular</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="READONLY">Read Only</option>
                   </select>
                 </div>
               </div>
@@ -297,12 +297,28 @@ const UserManagementPage: React.FC = () => {
                           )}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {user.email}
-                          </div>
+                          {editingUser === user.id ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={editForm.name}
+                                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                className="text-sm font-medium text-gray-900 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {user.email}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -313,9 +329,9 @@ const UserManagementPage: React.FC = () => {
                           onChange={(e) => setEditForm({...editForm, role: e.target.value})}
                           className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="regular">Regular</option>
-                          <option value="admin">Admin</option>
-                          <option value="readonly">Read Only</option>
+                          <option value="REGULAR">Regular</option>
+                          <option value="ADMIN">Admin</option>
+                          <option value="READONLY">Read Only</option>
                         </select>
                       ) : (
                         <div className="flex items-center space-x-2">

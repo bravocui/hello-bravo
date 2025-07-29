@@ -50,7 +50,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'ADMIN') {
     return <Navigate to="/" replace />;
   }
   
@@ -78,7 +78,7 @@ const GuestRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
   
   // Check if user is guest
-  const isGuest = user?.email?.includes('guest') || user?.name?.includes('Guest') || user?.role === 'guest';
+  const isGuest = user?.email?.includes('guest') || user?.name?.includes('Guest') || user?.role === 'GUEST';
   if (isGuest) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

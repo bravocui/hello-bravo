@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({
           {(showUserInfo || showLogout) && (
             <div className="flex items-center space-x-4">
               {/* Admin User Management Button */}
-              {user?.role === 'admin' && (
+              {user?.role === 'ADMIN' && (
                 <button
                   onClick={() => navigate('/user-management')}
                   className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"

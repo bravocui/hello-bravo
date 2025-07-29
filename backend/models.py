@@ -4,10 +4,10 @@ from datetime import date
 from enum import Enum
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    REGULAR = "regular"
-    READONLY = "readonly"
-    GUEST = "guest"
+    ADMIN = "ADMIN"
+    REGULAR = "REGULAR"
+    READONLY = "READONLY"
+    GUEST = "GUEST"
 
 class User(BaseModel):
     id: Optional[int] = None
