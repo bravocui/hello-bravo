@@ -15,6 +15,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   databaseAvailable: boolean;
+  refreshDatabaseStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +38,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [databaseAvailable, setDatabaseAvailable] = useState(true);
 
+  // Function to check database status
+  const checkDatabaseStatus = async () => {
+    try {
+      const healthResponse = await api.get('/health');
+      const isAvailable = healthResponse.data.database?.available ?? false;
+      setDatabaseAvailable(isAvailable);
+      console.log('🔍 Database status updated:', isAvailable);
+    } catch (error) {
+      console.warn('Could not check database status:', error);
+      setDatabaseAvailable(false);
+    }
+  };
+
   useEffect(() => {
     // Only check auth once on mount
     if (hasCheckedAuth) return;
@@ -44,13 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = async () => {
       try {
         // First check database status
-        try {
-          const healthResponse = await api.get('/health');
-          setDatabaseAvailable(healthResponse.data.database?.available ?? false);
-        } catch (error) {
-          console.warn('Could not check database status:', error);
-          setDatabaseAvailable(false);
-        }
+        await checkDatabaseStatus();
         
         // Then check user auth
         const response = await api.get('/user/profile');
@@ -65,6 +73,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     checkAuth();
   }, [hasCheckedAuth]);
+
+  // Periodically check database status
+  useEffect(() => {
+    const interval = setInterval(checkDatabaseStatus, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const login = async (token: string) => {
     try {
@@ -92,7 +106,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     loading,
-    databaseAvailable
+    databaseAvailable,
+    refreshDatabaseStatus: checkDatabaseStatus
   };
 
   return (

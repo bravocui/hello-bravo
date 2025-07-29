@@ -24,6 +24,7 @@ const HealthStatusBar: React.FC = () => {
         setError(null);
         
         const response = await api.get('/health');
+        console.log('🔍 Health check response:', response.data);
         setHealthStatus(response.data);
       } catch (err) {
         setError('Failed to check backend health');

@@ -75,9 +75,14 @@ async def get_current_user(session_token: str = Cookie(None), db: Session = Depe
     print(f"🔐 Authentication Debug:")
     print(f"   Session token present: {session_token is not None}")
     print(f"   Session token length: {len(session_token) if session_token else 0}")
+    print(f"   Session token preview: {session_token[:50] if session_token else 'None'}...")
     
     if not session_token:
         print("❌ No session token found in cookies")
+        print("🔍 This usually means:")
+        print("   1. Cookies are not being sent by the browser")
+        print("   2. SameSite policy is blocking the cookie")
+        print("   3. Cookie domain/path is incorrect")
         raise HTTPException(status_code=401, detail="Not authenticated (no cookie)")
     
     try:
@@ -175,7 +180,7 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
         if ENVIRONMENT == "production":
             # For production: cross-domain cookies
             cookie_kwargs.update({
-                "samesite": "none"     # Required for cross-domain in production
+                "samesite": "lax"     # More compatible with mobile browsers
             })
         else:
             # For development: local cookies
@@ -184,6 +189,13 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             })
         
         response.set_cookie(**cookie_kwargs)
+        print(f"🍪 Cookie set successfully:")
+        print(f"   Key: {JWT_COOKIE_NAME}")
+        print(f"   Path: {cookie_kwargs.get('path', 'Not set')}")
+        print(f"   SameSite: {cookie_kwargs.get('samesite', 'Not set')}")
+        print(f"   Secure: {cookie_kwargs.get('secure', 'Not set')}")
+        print(f"   HttpOnly: {cookie_kwargs.get('httponly', 'Not set')}")
+        print(f"   Max Age: {cookie_kwargs.get('max_age', 'Not set')}")
         return {"user": jwt_user_data}
         
     except HTTPException:
@@ -209,7 +221,7 @@ async def logout(response: Response):
     if ENVIRONMENT == "production":
         cookie_kwargs.update({
             "secure": True,
-            "samesite": "none"
+            "samesite": "lax"
         })
     
     response.delete_cookie(**cookie_kwargs)

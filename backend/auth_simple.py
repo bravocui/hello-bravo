@@ -55,7 +55,7 @@ async def google_auth_simple(token: dict, response: Response):
         if ENVIRONMENT == "production":
             # For production: cross-domain cookies
             cookie_kwargs.update({
-                "samesite": "none"     # Required for cross-domain in production
+                "samesite": "lax"     # More compatible with mobile browsers
             })
         else:
             # For development: local cookies
@@ -64,6 +64,13 @@ async def google_auth_simple(token: dict, response: Response):
             })
         
         response.set_cookie(**cookie_kwargs)
+        print(f"🍪 Cookie set successfully (simple auth):")
+        print(f"   Key: {JWT_COOKIE_NAME}")
+        print(f"   Path: {cookie_kwargs.get('path', 'Not set')}")
+        print(f"   SameSite: {cookie_kwargs.get('samesite', 'Not set')}")
+        print(f"   Secure: {cookie_kwargs.get('secure', 'Not set')}")
+        print(f"   HttpOnly: {cookie_kwargs.get('httponly', 'Not set')}")
+        print(f"   Max Age: {cookie_kwargs.get('max_age', 'Not set')}")
         return {"user": jwt_user_data}
         
     except Exception as e:
@@ -80,7 +87,7 @@ async def logout_simple(response: Response):
     if ENVIRONMENT == "production":
         cookie_kwargs.update({
             "secure": True,
-            "samesite": "none"
+            "samesite": "lax"
         })
     
     response.delete_cookie(**cookie_kwargs)
