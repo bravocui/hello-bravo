@@ -8,6 +8,7 @@ class UserRole(enum.Enum):
     ADMIN = "admin"
     REGULAR = "regular"
     READONLY = "readonly"
+    GUEST = "guest"
 
 class User(Base):
     __tablename__ = "users"
