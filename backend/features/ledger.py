@@ -16,7 +16,13 @@ async def get_ledger_entries(
 ):
     """Get all ledger entries for the current user"""
     try:
-        ledger_entries = db.query(DBLedgerEntry).all()
+        # If user is admin, get all entries; otherwise, filter by user_id
+        if current_user.role == "ADMIN":
+            ledger_entries = db.query(DBLedgerEntry).all()
+        else:
+            ledger_entries = db.query(DBLedgerEntry).filter(
+                DBLedgerEntry.user_id == current_user.id
+            ).all()
         
         # Convert to Pydantic models for response
         entries = []
@@ -44,9 +50,16 @@ async def create_ledger_entry(
 ):
     """Create a new ledger entry"""
     try:
+        # Find the user by name to get the correct user_id
+        from services.user_service import UserService
+        db_user = UserService.get_user_by_name(db, entry.user_name)
+        
+        if not db_user:
+            raise HTTPException(status_code=400, detail=f"User '{entry.user_name}' not found")
+        
         # Create new database entry
         db_entry = DBLedgerEntry(
-            user_id=current_user.id,
+            user_id=db_user.id,
             year=entry.year,
             month=entry.month,
             category=entry.category,
@@ -71,6 +84,8 @@ async def create_ledger_entry(
             user_name=db_entry.user_name,
             notes=db_entry.notes
         )
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create ledger entry: {str(e)}")
@@ -115,11 +130,14 @@ async def update_ledger_entry(
 ):
     """Update a ledger entry"""
     try:
-        # Find the entry
-        db_entry = db.query(DBLedgerEntry).filter(
-            DBLedgerEntry.id == entry_id,
-            DBLedgerEntry.user_id == current_user.id
-        ).first()
+        # Find the entry - allow admin users to edit any entry
+        query = db.query(DBLedgerEntry).filter(DBLedgerEntry.id == entry_id)
+        
+        # If user is admin, don't filter by user_id
+        if current_user.role != "ADMIN":
+            query = query.filter(DBLedgerEntry.user_id == current_user.id)
+        
+        db_entry = query.first()
         
         if not db_entry:
             raise HTTPException(status_code=404, detail="Ledger entry not found")
@@ -160,11 +178,14 @@ async def delete_ledger_entry(
 ):
     """Delete a ledger entry"""
     try:
-        # Find the entry
-        db_entry = db.query(DBLedgerEntry).filter(
-            DBLedgerEntry.id == entry_id,
-            DBLedgerEntry.user_id == current_user.id
-        ).first()
+        # Find the entry - allow admin users to delete any entry
+        query = db.query(DBLedgerEntry).filter(DBLedgerEntry.id == entry_id)
+        
+        # If user is admin, don't filter by user_id
+        if current_user.role != "ADMIN":
+            query = query.filter(DBLedgerEntry.user_id == current_user.id)
+        
+        db_entry = query.first()
         
         if not db_entry:
             raise HTTPException(status_code=404, detail="Ledger entry not found")

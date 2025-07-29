@@ -39,6 +39,22 @@ class UserService:
             raise
     
     @staticmethod
+    def get_user_by_name(db: Session, name: str) -> Optional[User]:
+        """Get user by name"""
+        try:
+            print(f"🔍 Looking up user by name: {name}")
+            user = db.query(User).filter(User.name == name).first()
+            if user:
+                print(f"✅ User found by name: {user.name} (ID: {user.id}, Email: {user.email})")
+            else:
+                print(f"❌ User not found by name: {name}")
+            return user
+        except Exception as e:
+            print(f"❌ Error in get_user_by_name: {e}")
+            print(f"🔗 Database URL: {DATABASE_URL}")
+            raise
+    
+    @staticmethod
     def create_user(db: Session, user_data: dict) -> User:
         """Create a new user"""
         try:

@@ -188,3 +188,18 @@ async def delete_user(
         raise HTTPException(status_code=500, detail="Failed to delete user")
     
     return {"message": "User deleted successfully"} 
+
+@router.get("/list-names")
+async def list_user_names(
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    """List all user names for dropdown (no auth required)"""
+    users = UserService.get_all_users(db)
+    return [
+        {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        }
+        for user in users
+    ]

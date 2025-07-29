@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3 } from 'lucide-react';
+import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3, Edit, Save, X, Plus, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import api from '../config/api';
 import Header from './Header';
@@ -23,10 +23,18 @@ const AccountingPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('all-users');
   const [sortBy, setSortBy] = useState<'category' | 'amount' | 'percentage'>('amount');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedView, setSelectedView] = useState<'monthly-trend' | 'category-details' | 'credit-card-details' | 'detailed-data'>('monthly-trend');
+  const [selectedView, setSelectedView] = useState<'monthly-trend' | 'category-details' | 'credit-card-details' | 'detailed-data'>('detailed-data');
   const [tableSortField, setTableSortField] = useState<'year' | 'month' | 'user_name' | 'credit_card' | 'category' | 'amount'>('year');
   const [tableSortOrder, setTableSortOrder] = useState<'asc' | 'desc'>('desc');
   const [dataSource, setDataSource] = useState<'database' | 'mock'>('database');
+  const [editingEntry, setEditingEntry] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<Partial<LedgerEntry>>({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState<Partial<LedgerEntry>>({});
+  const [addLoading, setAddLoading] = useState(false);
+  const [users, setUsers] = useState<Array<{id: number, name: string, email: string}>>([]);
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
   const fetchLedgerData = useCallback(async () => {
     try {
@@ -44,9 +52,20 @@ const AccountingPage: React.FC = () => {
     }
   }, [dataSource]);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await api.get('/users/list-names');
+      setUsers(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      setUsers([]); // Set empty array on error
+    }
+  }, []);
+
   useEffect(() => {
     fetchLedgerData();
-  }, [fetchLedgerData]);
+    fetchUsers();
+  }, [fetchLedgerData, fetchUsers]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -89,6 +108,148 @@ const AccountingPage: React.FC = () => {
     } else {
       setTableSortField(field);
       setTableSortOrder('asc');
+    }
+  };
+
+  const startEditing = (entry: LedgerEntry) => {
+    if (dataSource === 'mock') {
+      return; // Disable editing for mock data
+    }
+    setEditingEntry(entry.id);
+    setEditForm({
+      year: entry.year,
+      month: entry.month,
+      category: entry.category,
+      amount: entry.amount,
+      credit_card: entry.credit_card,
+      user_name: entry.user_name,
+      notes: entry.notes
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingEntry(null);
+    setEditForm({});
+  };
+
+  const handleUpdateEntry = async (entryId: number) => {
+    try {
+      setEditLoading(true);
+      
+      // Find the original entry to get all required fields
+      const originalEntry = ledgerData.find(entry => entry.id === entryId);
+      if (!originalEntry) {
+        throw new Error('Entry not found');
+      }
+      
+      // Create complete entry object with updated fields
+      const updatedEntry = {
+        id: entryId,
+        year: editForm.year || originalEntry.year,
+        month: editForm.month || originalEntry.month,
+        category: editForm.category || originalEntry.category,
+        amount: editForm.amount || originalEntry.amount,
+        credit_card: editForm.credit_card || originalEntry.credit_card,
+        user_name: editForm.user_name || originalEntry.user_name,
+        notes: editForm.notes || originalEntry.notes
+      };
+      
+      const response = await api.put(`/ledger/entries/${entryId}`, updatedEntry);
+      
+      // Update the local state with the updated entry
+      setLedgerData(prevData => 
+        prevData.map(entry => 
+          entry.id === entryId ? response.data : entry
+        )
+      );
+      
+      setEditingEntry(null);
+      setEditForm({});
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update entry');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const startAdding = () => {
+    if (dataSource === 'mock') {
+      return; // Disable adding for mock data
+    }
+    const now = new Date();
+    // Get current user from localStorage or default to first user
+    const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
+    const defaultUserName = currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
+    
+    setAddForm({
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      user_name: defaultUserName,
+      credit_card: '',
+      category: '',
+      amount: 0,
+      notes: ''
+    });
+    setShowAddForm(true);
+  };
+
+  const cancelAdding = () => {
+    setShowAddForm(false);
+    setAddForm({});
+  };
+
+  const handleAddEntry = async () => {
+    try {
+      setAddLoading(true);
+      
+      // Create new entry object
+      const newEntry = {
+        year: addForm.year || new Date().getFullYear(),
+        month: addForm.month || new Date().getMonth() + 1,
+        category: addForm.category || '',
+        amount: addForm.amount || 0,
+        credit_card: addForm.credit_card || '',
+        user_name: addForm.user_name || '',
+        notes: addForm.notes || ''
+      };
+      
+      const response = await api.post('/ledger/entries', newEntry);
+      
+      // Add the new entry to the local state
+      setLedgerData(prevData => [response.data, ...prevData]);
+      
+      setShowAddForm(false);
+      setAddForm({});
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to add entry');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: number) => {
+    if (dataSource === 'mock') {
+      return; // Disable deleting for mock data
+    }
+    
+    if (!window.confirm('Are you sure you want to delete this expense entry?')) {
+      return;
+    }
+    
+    try {
+      setDeleteLoading(entryId);
+      
+      await api.delete(`/ledger/entries/${entryId}`);
+      
+      // Remove the entry from local state
+      setLedgerData(prevData => prevData.filter(entry => entry.id !== entryId));
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete entry');
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -773,14 +934,134 @@ const AccountingPage: React.FC = () => {
         {/* Detailed Data Table */}
         {selectedView === 'detailed-data' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center space-x-3 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Detailed Expense Data</h2>
-            <div className="w-8 h-8 bg-accounting-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-accounting-600" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-lg font-semibold text-gray-900">Detailed Expense Data</h2>
+              <div className="w-8 h-8 bg-accounting-100 rounded-lg flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-accounting-600" />
+              </div>
             </div>
-          </div>
-          
-          <div className="overflow-x-auto">
+            <button
+              onClick={startAdding}
+              disabled={dataSource === 'mock'}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                dataSource === 'mock' 
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                  : 'bg-accounting-600 text-white hover:bg-accounting-700'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Expense</span>
+            </button>
+                      </div>
+            
+            {/* Add New Expense Form */}
+            {showAddForm && (
+              <div className="mb-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Expense</h3>
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                    <input
+                      type="number"
+                      value={addForm.year || ''}
+                      onChange={(e) => setAddForm({...addForm, year: parseInt(e.target.value)})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                    <select
+                      value={addForm.month || ''}
+                      onChange={(e) => setAddForm({...addForm, month: parseInt(e.target.value)})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                    >
+                      {[
+                        { value: 1, label: 'January' },
+                        { value: 2, label: 'February' },
+                        { value: 3, label: 'March' },
+                        { value: 4, label: 'April' },
+                        { value: 5, label: 'May' },
+                        { value: 6, label: 'June' },
+                        { value: 7, label: 'July' },
+                        { value: 8, label: 'August' },
+                        { value: 9, label: 'September' },
+                        { value: 10, label: 'October' },
+                        { value: 11, label: 'November' },
+                        { value: 12, label: 'December' }
+                      ].map(month => (
+                        <option key={month.value} value={month.value}>
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+                    <select
+                      value={addForm.user_name || ''}
+                      onChange={(e) => setAddForm({...addForm, user_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                    >
+                      <option value="">Select User</option>
+                      {Array.isArray(users) && users.map(user => (
+                        <option key={user.id} value={user.name}>{user.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Credit Card</label>
+                    <input
+                      type="text"
+                      value={addForm.credit_card || ''}
+                      onChange={(e) => setAddForm({...addForm, credit_card: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                      placeholder="Credit Card"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input
+                      type="text"
+                      value={addForm.category || ''}
+                      onChange={(e) => setAddForm({...addForm, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                      placeholder="Category"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={addForm.amount || ''}
+                      onChange={(e) => setAddForm({...addForm, amount: parseFloat(e.target.value)})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+                <div className="flex space-x-3 mt-4">
+                  <button
+                    onClick={handleAddEntry}
+                    disabled={addLoading}
+                    className="flex items-center space-x-2 bg-accounting-600 text-white px-4 py-2 rounded-md hover:bg-accounting-700 transition-colors disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{addLoading ? 'Adding...' : 'Add Expense'}</span>
+                  </button>
+                  <button
+                    onClick={cancelAdding}
+                    className="flex items-center space-x-2 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Cancel</span>
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -850,31 +1131,167 @@ const AccountingPage: React.FC = () => {
                       </span>
                     </div>
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedTableData.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {entry.year}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                      {editingEntry === entry.id ? (
+                        <input
+                          type="number"
+                          value={editForm.year || ''}
+                          onChange={(e) => setEditForm({...editForm, year: parseInt(e.target.value)})}
+                          className="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                        />
+                      ) : (
+                        <span className="block w-16">{entry.year}</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(entry.year, entry.month - 1).toLocaleDateString('en-US', { month: 'long' })}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                      {editingEntry === entry.id ? (
+                        <select
+                          value={editForm.month || ''}
+                          onChange={(e) => setEditForm({...editForm, month: parseInt(e.target.value)})}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                        >
+                          {[
+                            { value: 1, label: 'January' },
+                            { value: 2, label: 'February' },
+                            { value: 3, label: 'March' },
+                            { value: 4, label: 'April' },
+                            { value: 5, label: 'May' },
+                            { value: 6, label: 'June' },
+                            { value: 7, label: 'July' },
+                            { value: 8, label: 'August' },
+                            { value: 9, label: 'September' },
+                            { value: 10, label: 'October' },
+                            { value: 11, label: 'November' },
+                            { value: 12, label: 'December' }
+                          ].map(month => (
+                            <option key={month.value} value={month.value}>
+                              {month.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="block w-24">{new Date(entry.year, entry.month - 1).toLocaleDateString('en-US', { month: 'long' })}</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {entry.user_name}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                      {editingEntry === entry.id ? (
+                        <input
+                          type="text"
+                          value={editForm.user_name || ''}
+                          onChange={(e) => setEditForm({...editForm, user_name: e.target.value})}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                        />
+                      ) : (
+                        <span className="block w-20 truncate">{entry.user_name}</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {entry.credit_card}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                      {editingEntry === entry.id ? (
+                        <input
+                          type="text"
+                          value={editForm.credit_card || ''}
+                          onChange={(e) => setEditForm({...editForm, credit_card: e.target.value})}
+                          className="w-28 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                        />
+                      ) : (
+                        <span className="block w-28 truncate">{entry.credit_card}</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center space-x-2">
-                        <span>{getCategoryIcon(entry.category)}</span>
-                        <span>{entry.category}</span>
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                      {editingEntry === entry.id ? (
+                        <input
+                          type="text"
+                          value={editForm.category || ''}
+                          onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                        />
+                      ) : (
+                        <div className="flex items-center space-x-2 w-24">
+                          <span>{getCategoryIcon(entry.category)}</span>
+                          <span className="truncate">{entry.category}</span>
+                        </div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                      {formatCurrency(entry.amount)}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600 min-w-0">
+                      {editingEntry === entry.id ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={editForm.amount || ''}
+                          onChange={(e) => setEditForm({...editForm, amount: parseFloat(e.target.value)})}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                        />
+                      ) : (
+                        <span className="block w-20">{formatCurrency(entry.amount)}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {editingEntry === entry.id ? (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleUpdateEntry(entry.id)}
+                            disabled={editLoading || dataSource === 'mock'}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                              dataSource === 'mock'
+                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                : editLoading
+                                ? 'bg-green-600 text-white opacity-50'
+                                : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
+                            title={dataSource === 'mock' ? 'Save disabled for mock data' : 'Save'}
+                          >
+                            <Save className="w-3 h-3" />
+                            <span>Save</span>
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="flex items-center space-x-1 px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
+                            title="Cancel"
+                          >
+                            <X className="w-3 h-3" />
+                            <span>Cancel</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => startEditing(entry)}
+                            disabled={dataSource === 'mock'}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                              dataSource === 'mock'
+                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                            }`}
+                            title={dataSource === 'mock' ? 'Edit disabled for mock data' : 'Edit'}
+                          >
+                            <Edit className="w-3 h-3" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEntry(entry.id)}
+                            disabled={deleteLoading === entry.id || dataSource === 'mock'}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                              dataSource === 'mock'
+                                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                : deleteLoading === entry.id
+                                ? 'bg-red-600 text-white opacity-50'
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                            }`}
+                            title={dataSource === 'mock' ? 'Delete disabled for mock data' : 'Delete'}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>{deleteLoading === entry.id ? 'Deleting...' : 'Delete'}</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
