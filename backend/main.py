@@ -182,7 +182,7 @@ async def health_check():
     
     try:
         from sqlalchemy import create_engine, text
-        from config import DATABASE_URL
+        from config import DATABASE_URL, ENVIRONMENT
         
         engine = create_engine(
             DATABASE_URL, 
@@ -207,6 +207,7 @@ async def health_check():
             "available": database_available,
             "error": db_error
         },
+        "environment": ENVIRONMENT,
         "timestamp": datetime.utcnow().isoformat()
     }
 

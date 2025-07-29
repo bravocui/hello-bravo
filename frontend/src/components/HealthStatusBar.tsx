@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Monitor, Server } from 'lucide-react';
 import api from '../config/api';
 
 interface HealthStatus {
@@ -10,12 +10,24 @@ interface HealthStatus {
     error: string | null;
   };
   timestamp: string;
+  environment?: string; // Backend environment
 }
 
 const HealthStatusBar: React.FC = () => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get frontend environment
+  const getFrontendEnvironment = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'development';
+    }
+    if (window.location.hostname.includes('github.io')) {
+      return 'production';
+    }
+    return 'production'; // Default to production
+  };
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -70,6 +82,8 @@ const HealthStatusBar: React.FC = () => {
   }
 
   const isHealthy = healthStatus.status === 'healthy' && healthStatus.database.available;
+  const frontendEnv = getFrontendEnvironment();
+  const backendEnv = healthStatus.environment || 'production';
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 border-t px-4 py-2 text-xs ${
@@ -83,10 +97,16 @@ const HealthStatusBar: React.FC = () => {
         ) : (
           <AlertCircle className="w-3 h-3" />
         )}
-        <span>
-          Backend: {healthStatus.status} | 
-          Database: {healthStatus.database.available ? 'Connected' : 'Disconnected'} | 
-          v{healthStatus.timestamp}
+        <span className="flex items-center space-x-1">
+          <Monitor className="w-3 h-3" />
+          <span>Frontend: {frontendEnv}</span>
+          <span>|</span>
+          <Server className="w-3 h-3" />
+          <span>Backend: {backendEnv}</span>
+          <span>|</span>
+          <span>DB: {healthStatus.database.available ? 'Connected' : 'Disconnected'}</span>
+          <span>|</span>
+          <span>v{healthStatus.timestamp}</span>
         </span>
       </div>
     </div>
