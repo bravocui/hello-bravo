@@ -112,7 +112,7 @@ async def create_user(
     db: Session = Depends(get_db)
 ) -> UserResponse:
     """Create a new user (admin only)"""
-    # Check if user already exists
+    # Check if user already exists by email
     existing_user = UserService.get_user_by_email(db, user_data.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
@@ -124,18 +124,23 @@ async def create_user(
         "picture": None
     }
     
-    # Create user with specified role
-    db_user = UserService.create_user_with_role(db, user_dict, user_data.role)
-    
-    return UserResponse(
-        id=db_user.id,
-        email=db_user.email,
-        name=db_user.name,
-        picture_url=db_user.picture_url or "",
-        role=db_user.role.value,
-        is_active=db_user.is_active,
-        created_at=db_user.created_at.isoformat() if db_user.created_at else ""
-    )
+    try:
+        # Create user with specified role
+        db_user = UserService.create_user_with_role(db, user_dict, user_data.role)
+        
+        return UserResponse(
+            id=db_user.id,
+            email=db_user.email,
+            name=db_user.name,
+            picture_url=db_user.picture_url or "",
+            role=db_user.role.value,
+            is_active=db_user.is_active,
+            created_at=db_user.created_at.isoformat() if db_user.created_at else ""
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
 
 @router.put("/admin/{user_id}", response_model=UserResponse)
 async def update_user(
@@ -149,31 +154,38 @@ async def update_user(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Update user
-    updated_user = UserService.update_user_with_role(db, user_id, {
-        "name": user_data.name,
-        "role": user_data.role
-    })
-    
-    if not updated_user:
-        raise HTTPException(status_code=404, detail="Failed to update user")
-    
-    return UserResponse(
-        id=updated_user.id,
-        email=updated_user.email,
-        name=updated_user.name,
-        picture_url=updated_user.picture_url or "",
-        role=updated_user.role.value,
-        is_active=updated_user.is_active,
-        created_at=updated_user.created_at.isoformat() if updated_user.created_at else ""
-    )
+    try:
+        # Update user
+        update_data = {
+            "name": user_data.name,
+            "role": user_data.role
+        }
+        
+        updated_user = UserService.update_user_with_role(db, user_id, update_data)
+        
+        if not updated_user:
+            raise HTTPException(status_code=404, detail="Failed to update user")
+        
+        return UserResponse(
+            id=updated_user.id,
+            email=updated_user.email,
+            name=updated_user.name,
+            picture_url=updated_user.picture_url or "",
+            role=updated_user.role.value,
+            is_active=updated_user.is_active,
+            created_at=updated_user.created_at.isoformat() if updated_user.created_at else ""
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update user: {str(e)}")
 
 @router.delete("/admin/{user_id}")
 async def delete_user(
     user_id: int,
     admin_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
-) -> Dict[str, str]:
+) -> Dict[str, Any]:
     """Delete user (admin only)"""
     # Prevent admin from deleting themselves
     if admin_user.id == user_id:
@@ -183,9 +195,16 @@ async def delete_user(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    success = UserService.delete_user(db, user_id)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to delete user")
+    result = UserService.delete_user(db, user_id)
+    if not result["success"]:
+        if "related_data" in result:
+            # User has related data - return detailed error
+            related_data = result["related_data"]
+            error_message = f"Cannot delete user. User has: {related_data['credit_cards']} credit cards, {related_data['ledger_entries']} expenses, {related_data['fitness_entries']} fitness entries, and {related_data['travel_entries']} travel entries."
+            raise HTTPException(status_code=400, detail=error_message)
+        else:
+            # Other error
+            raise HTTPException(status_code=500, detail=result["error"])
     
     return {"message": "User deleted successfully"} 
 

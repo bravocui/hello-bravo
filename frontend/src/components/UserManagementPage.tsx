@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, User as UserIcon, Shield, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, User as UserIcon, Shield, Eye, CreditCard, Tag } from 'lucide-react';
 import Header from './Header';
 import api from '../config/api';
 
@@ -13,6 +13,23 @@ interface User {
   created_at: string;
 }
 
+interface CreditCardData {
+  id: number;
+  user_id: number;
+  name: string;
+  owner: string;
+  opening_time: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface SpendingCategory {
+  id: number;
+  category_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 interface CreateUserForm {
   email: string;
   name: string;
@@ -24,46 +41,102 @@ interface EditUserForm {
   role: string;
 }
 
+interface CreateCreditCardForm {
+  name: string;
+  owner: string;
+  opening_time: string;
+}
+
+interface EditCreditCardForm {
+  name: string;
+  owner: string;
+  opening_time: string;
+}
+
+interface CreateSpendingCategoryForm {
+  category_name: string;
+}
+
+interface EditSpendingCategoryForm {
+  category_name: string;
+}
+
 const UserManagementPage: React.FC = () => {
+  // Users state
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [updatingUser, setUpdatingUser] = useState<number | null>(null);
+  const [showCreateUserForm, setShowCreateUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<number | null>(null);
-  const [createForm, setCreateForm] = useState<CreateUserForm>({
+  const [createUserForm, setCreateUserForm] = useState<CreateUserForm>({
     email: '',
     name: '',
     role: 'REGULAR'
   });
-  const [editForm, setEditForm] = useState<EditUserForm>({
+  const [editUserForm, setEditUserForm] = useState<EditUserForm>({
     name: '',
     role: 'REGULAR'
   });
 
+  // Credit Cards state
+  const [creditCards, setCreditCards] = useState<CreditCardData[]>([]);
+  const [creditCardsLoading, setCreditCardsLoading] = useState(true);
+  const [showCreateCreditCardForm, setShowCreateCreditCardForm] = useState(false);
+  const [editingCreditCard, setEditingCreditCard] = useState<number | null>(null);
+  const [createCreditCardForm, setCreateCreditCardForm] = useState<CreateCreditCardForm>({
+    name: '',
+    owner: '',
+    opening_time: new Date().toISOString().slice(0, 10)
+  });
+  const [editCreditCardForm, setEditCreditCardForm] = useState<EditCreditCardForm>({
+    name: '',
+    owner: '',
+    opening_time: ''
+  });
+
+  // Spending Categories state
+  const [spendingCategories, setSpendingCategories] = useState<SpendingCategory[]>([]);
+  const [spendingCategoriesLoading, setSpendingCategoriesLoading] = useState(true);
+  const [showCreateSpendingCategoryForm, setShowCreateSpendingCategoryForm] = useState(false);
+  const [editingSpendingCategory, setEditingSpendingCategory] = useState<number | null>(null);
+  const [createSpendingCategoryForm, setCreateSpendingCategoryForm] = useState<CreateSpendingCategoryForm>({
+    category_name: ''
+  });
+  const [editSpendingCategoryForm, setEditSpendingCategoryForm] = useState<EditSpendingCategoryForm>({
+    category_name: ''
+  });
+
+  // General state
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   useEffect(() => {
     fetchUsers();
+    fetchCreditCards();
+    fetchSpendingCategories();
   }, []);
 
+  // Users API functions
   const fetchUsers = async () => {
     try {
-      setLoading(true);
+      setUsersLoading(true);
       const response = await api.get('/users/admin/list');
       setUsers(response.data);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch users');
     } finally {
-      setLoading(false);
+      setUsersLoading(false);
     }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post('/users/admin/create', createForm);
+      const response = await api.post('/users/admin/create', createUserForm);
       setUsers([response.data, ...users]);
-      setCreateForm({ email: '', name: '', role: 'regular' });
-      setShowCreateForm(false);
+      setCreateUserForm({ email: '', name: '', role: 'REGULAR' });
+      setShowCreateUserForm(false);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to create user');
@@ -72,14 +145,21 @@ const UserManagementPage: React.FC = () => {
 
   const handleUpdateUser = async (userId: number) => {
     try {
-      const response = await api.put(`/users/admin/${userId}`, editForm);
+      setUpdatingUser(userId);
+      const response = await api.put(`/users/admin/${userId}`, editUserForm);
       setUsers(users.map(user => 
         user.id === userId ? response.data : user
       ));
       setEditingUser(null);
       setError(null);
+      setSuccessMessage(`User "${response.data.name}" updated successfully!`);
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to update user');
+      setSuccessMessage(null);
+    } finally {
+      setUpdatingUser(null);
     }
   };
 
@@ -93,21 +173,170 @@ const UserManagementPage: React.FC = () => {
       setUsers(users.filter(user => user.id !== userId));
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete user');
+      const errorMessage = err.response?.data?.detail || 'Failed to delete user';
+      
+      // Check if it's a related data error
+      if (errorMessage.includes('Cannot delete user. User has:')) {
+        // Show a more prominent warning
+        if (window.confirm(`${errorMessage}\n\nThis user cannot be deleted because they have associated data. Please remove all their data first before deleting the user account.`)) {
+          // User acknowledged the warning
+          setError(null);
+        } else {
+          // User cancelled
+          setError(null);
+        }
+      } else {
+        setError(errorMessage);
+      }
     }
   };
 
-  const startEditing = (user: User) => {
+  // Credit Cards API functions
+  const fetchCreditCards = async () => {
+    try {
+      setCreditCardsLoading(true);
+      const response = await api.get('/credit-cards/');
+      setCreditCards(response.data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to fetch credit cards');
+    } finally {
+      setCreditCardsLoading(false);
+    }
+  };
+
+  const handleCreateCreditCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await api.post('/credit-cards/', createCreditCardForm);
+      setCreditCards([response.data, ...creditCards]);
+      setCreateCreditCardForm({ name: '', owner: '', opening_time: new Date().toISOString().slice(0, 10) });
+      setShowCreateCreditCardForm(false);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to create credit card');
+    }
+  };
+
+  const handleUpdateCreditCard = async (cardId: number) => {
+    try {
+      const response = await api.put(`/credit-cards/${cardId}`, editCreditCardForm);
+      setCreditCards(creditCards.map(card => 
+        card.id === cardId ? response.data : card
+      ));
+      setEditingCreditCard(null);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update credit card');
+    }
+  };
+
+  const handleDeleteCreditCard = async (cardId: number) => {
+    if (!window.confirm('Are you sure you want to delete this credit card?')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/credit-cards/${cardId}`);
+      setCreditCards(creditCards.filter(card => card.id !== cardId));
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete credit card');
+    }
+  };
+
+  // Spending Categories API functions
+  const fetchSpendingCategories = async () => {
+    try {
+      setSpendingCategoriesLoading(true);
+      const response = await api.get('/spending-categories/');
+      setSpendingCategories(response.data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to fetch spending categories');
+    } finally {
+      setSpendingCategoriesLoading(false);
+    }
+  };
+
+  const handleCreateSpendingCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await api.post('/spending-categories/', createSpendingCategoryForm);
+      setSpendingCategories([response.data, ...spendingCategories]);
+      setCreateSpendingCategoryForm({ category_name: '' });
+      setShowCreateSpendingCategoryForm(false);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to create spending category');
+    }
+  };
+
+  const handleUpdateSpendingCategory = async (categoryId: number) => {
+    try {
+      const response = await api.put(`/spending-categories/${categoryId}`, editSpendingCategoryForm);
+      setSpendingCategories(spendingCategories.map(category => 
+        category.id === categoryId ? response.data : category
+      ));
+      setEditingSpendingCategory(null);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to update spending category');
+    }
+  };
+
+  const handleDeleteSpendingCategory = async (categoryId: number) => {
+    if (!window.confirm('Are you sure you want to delete this spending category?')) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/spending-categories/${categoryId}`);
+      setSpendingCategories(spendingCategories.filter(category => category.id !== categoryId));
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to delete spending category');
+    }
+  };
+
+  // Helper functions
+  const startEditingUser = (user: User) => {
     setEditingUser(user.id);
-    setEditForm({
+    setEditUserForm({
       name: user.name,
-      role: user.role.toUpperCase()
+      role: user.role
     });
   };
 
-  const cancelEditing = () => {
+  const cancelEditingUser = () => {
     setEditingUser(null);
-    setEditForm({ name: '', role: 'REGULAR' });
+    setEditUserForm({ name: '', role: 'REGULAR' });
+  };
+
+  const startEditingCreditCard = (card: CreditCardData) => {
+    setEditingCreditCard(card.id);
+    setEditCreditCardForm({
+      name: card.name,
+      owner: card.owner,
+      opening_time: new Date(card.opening_time).toISOString().slice(0, 10)
+    });
+  };
+
+  const cancelEditingCreditCard = () => {
+    setEditingCreditCard(null);
+    setEditCreditCardForm({ name: '', owner: '', opening_time: '' });
+  };
+
+  const startEditingSpendingCategory = (category: SpendingCategory) => {
+    setEditingSpendingCategory(category.id);
+    setEditSpendingCategoryForm({
+      category_name: category.category_name
+    });
+  };
+
+  const cancelEditingSpendingCategory = () => {
+    setEditingSpendingCategory(null);
+    setEditSpendingCategoryForm({ category_name: '' });
   };
 
   const getRoleIcon = (role: string) => {
@@ -136,11 +365,19 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  };
+
+  if (usersLoading || creditCardsLoading || spendingCategoriesLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header 
-          title="User Management" 
+          title="Admin Portal" 
           icon={UserIcon} 
           iconColor="blue"
           showBackButton
@@ -149,7 +386,7 @@ const UserManagementPage: React.FC = () => {
         />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         </div>
       </div>
@@ -159,7 +396,7 @@ const UserManagementPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        title="User Management" 
+        title="Admin Portal" 
         icon={UserIcon} 
         iconColor="blue"
         showBackButton
@@ -177,212 +414,199 @@ const UserManagementPage: React.FC = () => {
           </div>
         )}
 
-        {/* Header Actions */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Users ({users.length})</h2>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add User</span>
-          </button>
-        </div>
+        {successMessage && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="flex">
+              <div className="text-green-800">{successMessage}</div>
+            </div>
+          </div>
+        )}
 
-        {/* Create User Form */}
-        {showCreateForm && (
-          <div className="mb-6 bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New User</h3>
-            <form onSubmit={handleCreateUser} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
+        {/* Users Block */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-lg font-semibold text-gray-900">Users</h2>
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <UserIcon className="w-4 h-4 text-blue-600" />
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCreateUserForm(true)}
+              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add User</span>
+            </button>
+          </div>
+
+          {/* Create User Form */}
+          {showCreateUserForm && (
+            <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <input
                     type="email"
+                    placeholder="Email"
+                    value={createUserForm.email}
+                    onChange={(e) => setCreateUserForm({...createUserForm, email: e.target.value})}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
-                    value={createForm.email}
-                    onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name
-                  </label>
                   <input
                     type="text"
+                    placeholder="Name"
+                    value={createUserForm.name}
+                    onChange={(e) => setCreateUserForm({...createUserForm, name: e.target.value})}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
-                    value={createForm.name}
-                    onChange={(e) => setCreateForm({...createForm, name: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role
-                  </label>
                   <select
-                    value={createForm.role}
-                    onChange={(e) => setCreateForm({...createForm, role: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={createUserForm.role}
+                    onChange={(e) => setCreateUserForm({...createUserForm, role: e.target.value})}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="REGULAR">Regular</option>
                     <option value="ADMIN">Admin</option>
                     <option value="READONLY">Read Only</option>
                   </select>
                 </div>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  type="submit"
-                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Create User</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="flex items-center space-x-2 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Cancel</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+                <div className="flex space-x-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4 inline mr-2" />
+                    Create
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateUserForm(false)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    <X className="w-4 h-4 inline mr-2" />
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
-        {/* Users Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* Users Table */}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avatar</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
-                  <tr key={user.id}>
+                  <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          {user.picture_url ? (
-                            <img
-                              className="h-10 w-10 rounded-full"
-                              src={user.picture_url}
-                              alt={user.name}
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                              <UserIcon className="w-5 h-5 text-gray-600" />
-                            </div>
-                          )}
+                      {user.picture_url ? (
+                        <img className="h-10 w-10 rounded-full" src={user.picture_url} alt={user.name} />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                          {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
-                        <div className="ml-4">
-                          {editingUser === user.id ? (
-                            <div className="space-y-2">
-                              <input
-                                type="text"
-                                value={editForm.name}
-                                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                className="text-sm font-medium text-gray-900 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                              <div className="text-sm text-gray-500">
-                                {user.email}
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="text-sm font-medium text-gray-900">
-                                {user.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {user.email}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {editingUser === user.id ? (
+                        <input
+                          type="text"
+                          value={editUserForm.name}
+                          onChange={(e) => setEditUserForm({...editUserForm, name: e.target.value})}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+                        />
+                      ) : (
+                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{user.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingUser === user.id ? (
                         <select
-                          value={editForm.role}
-                          onChange={(e) => setEditForm({...editForm, role: e.target.value})}
-                          className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          value={editUserForm.role}
+                          onChange={(e) => setEditUserForm({...editUserForm, role: e.target.value})}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="REGULAR">Regular</option>
                           <option value="ADMIN">Admin</option>
                           <option value="READONLY">Read Only</option>
                         </select>
                       ) : (
-                        <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
                           {getRoleIcon(user.role)}
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
-                            {user.role}
-                          </span>
-                        </div>
+                          <span className="ml-1">{user.role}</span>
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {user.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {editingUser === user.id ? (
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleUpdateUser(user.id)}
-                            className="text-green-600 hover:text-green-900"
+                            disabled={updatingUser === user.id}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                              updatingUser === user.id 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-green-600 hover:bg-green-700'
+                            } text-white`}
                           >
-                            <Save className="w-4 h-4" />
+                            {updatingUser === user.id ? (
+                              <>
+                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span>Updating...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-3 h-3" />
+                                <span>Save</span>
+                              </>
+                            )}
                           </button>
                           <button
-                            onClick={cancelEditing}
-                            className="text-gray-600 hover:text-gray-900"
+                            onClick={cancelEditingUser}
+                            disabled={updatingUser === user.id}
+                            className={`flex items-center space-x-1 px-2 py-1 rounded text-xs ${
+                              updatingUser === user.id 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-gray-600 hover:bg-gray-700'
+                            } text-white`}
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3" />
+                            <span>Cancel</span>
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => startEditing(user)}
-                            className="text-blue-600 hover:text-blue-900"
+                            onClick={() => startEditingUser(user)}
+                            className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-3 h-3" />
+                            <span>Edit</span>
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
                           </button>
                         </div>
                       )}
@@ -391,6 +615,303 @@ const UserManagementPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Credit Cards and Spending Categories Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Credit Cards Block */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <h2 className="text-lg font-semibold text-gray-900">Credit Cards</h2>
+                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-green-600" />
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateCreditCardForm(true)}
+                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Credit Card</span>
+              </button>
+            </div>
+
+            {/* Create Credit Card Form */}
+            {showCreateCreditCardForm && (
+              <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <form onSubmit={handleCreateCreditCard} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Card Name"
+                      value={createCreditCardForm.name}
+                      onChange={(e) => setCreateCreditCardForm({...createCreditCardForm, name: e.target.value})}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                    <select
+                      value={createCreditCardForm.owner}
+                      onChange={(e) => setCreateCreditCardForm({...createCreditCardForm, owner: e.target.value})}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    >
+                      <option value="">Select Owner</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.name}>
+                          {user.name} ({user.email})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      value={createCreditCardForm.opening_time}
+                      onChange={(e) => setCreateCreditCardForm({...createCreditCardForm, opening_time: e.target.value})}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      <Save className="w-4 h-4 inline mr-2" />
+                      Create
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateCreditCardForm(false)}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      <X className="w-4 h-4 inline mr-2" />
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Credit Cards Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opening Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {creditCards.map((card) => (
+                    <tr key={card.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingCreditCard === card.id ? (
+                          <input
+                            type="text"
+                            value={editCreditCardForm.name}
+                            onChange={(e) => setEditCreditCardForm({...editCreditCardForm, name: e.target.value})}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">{card.name}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingCreditCard === card.id ? (
+                          <select
+                            value={editCreditCardForm.owner}
+                            onChange={(e) => setEditCreditCardForm({...editCreditCardForm, owner: e.target.value})}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          >
+                            <option value="">Select Owner</option>
+                            {users.map((user) => (
+                              <option key={user.id} value={user.name}>
+                                {user.name} ({user.email})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="text-sm text-gray-900">{card.owner}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingCreditCard === card.id ? (
+                          <input
+                            type="date"
+                            value={editCreditCardForm.opening_time}
+                            onChange={(e) => setEditCreditCardForm({...editCreditCardForm, opening_time: e.target.value})}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-900">{formatDate(card.opening_time)}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {editingCreditCard === card.id ? (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleUpdateCreditCard(card.id)}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-green-600 text-white hover:bg-green-700"
+                            >
+                              <Save className="w-3 h-3" />
+                              <span>Save</span>
+                            </button>
+                            <button
+                              onClick={cancelEditingCreditCard}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-gray-600 text-white hover:bg-gray-700"
+                            >
+                              <X className="w-3 h-3" />
+                              <span>Cancel</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => startEditingCreditCard(card)}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCreditCard(card.id)}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Spending Categories Block */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <h2 className="text-lg font-semibold text-gray-900">Spending Categories</h2>
+                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Tag className="w-4 h-4 text-purple-600" />
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateSpendingCategoryForm(true)}
+                className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Category</span>
+              </button>
+            </div>
+
+            {/* Create Spending Category Form */}
+            {showCreateSpendingCategoryForm && (
+              <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <form onSubmit={handleCreateSpendingCategory} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Category Name"
+                      value={createSpendingCategoryForm.category_name}
+                      onChange={(e) => setCreateSpendingCategoryForm({...createSpendingCategoryForm, category_name: e.target.value})}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                    >
+                      <Save className="w-4 h-4 inline mr-2" />
+                      Create
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateSpendingCategoryForm(false)}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      <X className="w-4 h-4 inline mr-2" />
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Spending Categories Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {spendingCategories.map((category) => (
+                    <tr key={category.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {editingSpendingCategory === category.id ? (
+                          <input
+                            type="text"
+                            value={editSpendingCategoryForm.category_name}
+                            onChange={(e) => setEditSpendingCategoryForm({...editSpendingCategoryForm, category_name: e.target.value})}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        ) : (
+                          <div className="text-sm font-medium text-gray-900">{category.category_name}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        {editingSpendingCategory === category.id ? (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleUpdateSpendingCategory(category.id)}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-purple-600 text-white hover:bg-purple-700"
+                            >
+                              <Save className="w-3 h-3" />
+                              <span>Save</span>
+                            </button>
+                            <button
+                              onClick={cancelEditingSpendingCategory}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-gray-600 text-white hover:bg-gray-700"
+                            >
+                              <X className="w-3 h-3" />
+                              <span>Cancel</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => startEditingSpendingCategory(category)}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSpendingCategory(category.id)}
+                              className="flex items-center space-x-1 px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

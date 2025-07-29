@@ -151,6 +151,11 @@ class UserService:
     @staticmethod
     def create_user_with_role(db: Session, user_data: dict, role: UserRole) -> User:
         """Create a new user with specified role"""
+        # Check if user name already exists
+        existing_user = db.query(User).filter(User.name == user_data["name"]).first()
+        if existing_user:
+            raise ValueError(f"User with name '{user_data['name']}' already exists")
+        
         db_user = User(
             email=user_data["email"],
             name=user_data["name"],
@@ -169,23 +174,86 @@ class UserService:
         if not db_user:
             return None
         
+        # Check if name is being updated
+        old_name = db_user.name
+        name_changed = "name" in user_data and user_data["name"] != old_name
+        
+        # If name is being changed, check for uniqueness
+        if name_changed:
+            existing_user = db.query(User).filter(
+                User.name == user_data["name"],
+                User.id != user_id  # Exclude current user from check
+            ).first()
+            if existing_user:
+                raise ValueError(f"User with name '{user_data['name']}' already exists")
+        
         # Update fields
         if "name" in user_data:
             db_user.name = user_data["name"]
         if "role" in user_data:
             db_user.role = user_data["role"]
         
+        # If name changed, update all related entries
+        if name_changed:
+            try:
+                from db_models import LedgerEntry, CreditCard
+                
+                # Update ledger entries
+                ledger_entries = db.query(LedgerEntry).filter(LedgerEntry.user_name == old_name).all()
+                for entry in ledger_entries:
+                    entry.user_name = user_data["name"]
+                
+                # Update credit cards (owner field)
+                credit_cards = db.query(CreditCard).filter(CreditCard.owner == old_name).all()
+                for card in credit_cards:
+                    card.owner = user_data["name"]
+                
+            except Exception as e:
+                db.rollback()
+                return None
+        
         db.commit()
         db.refresh(db_user)
         return db_user
     
     @staticmethod
-    def delete_user(db: Session, user_id: int) -> bool:
-        """Delete user (admin only)"""
+    def delete_user(db: Session, user_id: int) -> dict:
+        """Delete user (admin only) - returns status and related data info"""
         db_user = db.query(User).filter(User.id == user_id).first()
         if not db_user:
-            return False
+            return {"success": False, "error": "User not found"}
         
-        db.delete(db_user)
-        db.commit()
-        return True 
+        try:
+            # Check for related data
+            from db_models import LedgerEntry, CreditCard, FitnessEntry, TravelEntry
+            
+            # Count related data
+            credit_cards_count = db.query(CreditCard).filter(CreditCard.user_id == user_id).count()
+            ledger_entries_count = db.query(LedgerEntry).filter(LedgerEntry.user_id == user_id).count()
+            fitness_entries_count = db.query(FitnessEntry).filter(FitnessEntry.user_id == user_id).count()
+            travel_entries_count = db.query(TravelEntry).filter(TravelEntry.user_id == user_id).count()
+            
+            total_related_data = credit_cards_count + ledger_entries_count + fitness_entries_count + travel_entries_count
+            
+            if total_related_data > 0:
+                return {
+                    "success": False,
+                    "error": "Cannot delete user with related data",
+                    "related_data": {
+                        "credit_cards": credit_cards_count,
+                        "ledger_entries": ledger_entries_count,
+                        "fitness_entries": fitness_entries_count,
+                        "travel_entries": travel_entries_count,
+                        "total": total_related_data
+                    }
+                }
+            
+            # If no related data, safe to delete
+            db.delete(db_user)
+            db.commit()
+            return {"success": True, "message": "User deleted successfully"}
+            
+        except Exception as e:
+            print(f"Error deleting user {user_id}: {e}")
+            db.rollback()
+            return {"success": False, "error": f"Database error: {str(e)}"} 

@@ -20,6 +20,8 @@ from features.travel import router as travel_router
 from features.weather import router as weather_router
 from features.ledger import router as ledger_router
 from features.users import router as users_router
+from features.credit_cards import router as credit_cards_router
+from features.spending_categories import router as spending_categories_router
 
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
 
@@ -125,6 +127,8 @@ app.include_router(travel_router)
 app.include_router(weather_router)
 app.include_router(ledger_router)
 app.include_router(users_router)
+app.include_router(credit_cards_router)
+app.include_router(spending_categories_router)
 
 # Auth endpoints
 @app.post("/auth/google")
@@ -215,7 +219,7 @@ async def health_check():
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str, request: Request):
     # Don't serve React app for API routes
-    if full_path.startswith(("api/", "auth/", "fitness/", "travel/", "weather/", "ledger/")):
+    if full_path.startswith(("api/", "auth/", "fitness/", "travel/", "weather/", "ledger/", "credit-cards/", "spending-categories/")):
         raise HTTPException(status_code=404, detail="API endpoint not found")
     
     # Serve the React app's index.html for all other routes

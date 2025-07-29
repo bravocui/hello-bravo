@@ -6,7 +6,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://hello-bravo-api-772654
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased timeout to 30 seconds for operations that update many records
   headers: {
     'Content-Type': 'application/json',
   },

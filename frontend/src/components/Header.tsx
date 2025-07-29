@@ -58,36 +58,40 @@ const Header: React.FC<HeaderProps> = ({
           {/* User Info and Logout */}
           {(showUserInfo || showLogout) && (
             <div className="flex items-center space-x-4">
-              {/* Admin User Management Button */}
+              {/* Admin Portal Button */}
               {user?.role === 'ADMIN' && (
                 <button
                   onClick={() => navigate('/user-management')}
                   className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"
-                  title="User Management"
+                  title="Admin Portal"
                 >
                   <Users className="w-4 h-4" />
-                  <span className="hidden sm:block text-sm">Users</span>
+                  <span className="hidden sm:block text-sm">Admin Portal</span>
                 </button>
               )}
               
               {showUserInfo && user && (
                 <div className="flex items-center space-x-2">
-                  {user.picture && (
+                  {user.picture ? (
                     <img 
                       src={user.picture} 
                       alt={user.name}
                       className="w-8 h-8 rounded-full"
                     />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
                   )}
                   <div className="hidden sm:block">
-                    <span className="text-sm font-medium text-gray-700 block">
+                    <span className="text-sm font-medium text-gray-700">
                       {user.name}
+                      {user.role && (
+                        <span className="text-xs text-gray-400 ml-1 lowercase">
+                          {user.role.toLowerCase()}
+                        </span>
+                      )}
                     </span>
-                    {user.role && (
-                      <span className="text-xs text-gray-500 capitalize">
-                        {user.role}
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
