@@ -1,11 +1,19 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
+from enum import Enum
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    REGULAR = "regular"
+    READONLY = "readonly"
 
 class User(BaseModel):
+    id: Optional[int] = None
     email: str
     name: str
     picture: Optional[str] = None
+    role: UserRole = UserRole.REGULAR
 
 class FitnessEntry(BaseModel):
     id: Optional[int] = None

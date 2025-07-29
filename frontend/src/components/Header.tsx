@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut } from 'lucide-react';
+import { ArrowLeft, LogOut, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getVersionString } from '../config/version';
 
@@ -58,6 +58,18 @@ const Header: React.FC<HeaderProps> = ({
           {/* User Info and Logout */}
           {(showUserInfo || showLogout) && (
             <div className="flex items-center space-x-4">
+              {/* Admin User Management Button */}
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/user-management')}
+                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"
+                  title="User Management"
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:block text-sm">Users</span>
+                </button>
+              )}
+              
               {showUserInfo && user && (
                 <div className="flex items-center space-x-2">
                   {user.picture && (
@@ -67,9 +79,16 @@ const Header: React.FC<HeaderProps> = ({
                       className="w-8 h-8 rounded-full"
                     />
                   )}
-                  <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                    {user.name}
-                  </span>
+                  <div className="hidden sm:block">
+                    <span className="text-sm font-medium text-gray-700 block">
+                      {user.name}
+                    </span>
+                    {user.role && (
+                      <span className="text-xs text-gray-500 capitalize">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
               

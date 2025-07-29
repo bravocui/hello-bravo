@@ -90,20 +90,25 @@ async def get_current_user(session_token: str = Cookie(None), db: Session = Depe
             if not db_user:
                 raise HTTPException(status_code=401, detail="User not found in database")
         except Exception as db_error:
-            # Database connection or operation error
-            error_msg = f"Database error during authentication: {str(db_error)}"
-            if "connection" in str(db_error).lower():
-                error_msg = f"Database connection failed: {str(db_error)}"
-            elif "timeout" in str(db_error).lower():
-                error_msg = f"Database connection timeout: {str(db_error)}"
-            elif "authentication" in str(db_error).lower():
-                error_msg = f"Database authentication failed: {str(db_error)}"
-            raise HTTPException(status_code=500, detail=error_msg)
+            # Check if it's a connection error
+            error_str = str(db_error).lower()
+            if any(keyword in error_str for keyword in ['timeout', 'connection', 'network', 'unreachable']):
+                # Database is unavailable - return error with specific message
+                raise HTTPException(
+                    status_code=503, 
+                    detail="Database is currently unavailable. Please try again later."
+                )
+            else:
+                # Other database errors
+                error_msg = f"Database error during authentication: {str(db_error)}"
+                raise HTTPException(status_code=500, detail=error_msg)
         
         return User(
+            id=db_user.id,
             email=db_user.email,
             name=db_user.name,
-            picture=db_user.picture_url
+            picture=db_user.picture_url,
+            role=db_user.role.value
         )
     except JWTError as jwt_error:
         raise HTTPException(status_code=401, detail=f"Invalid session token: {str(jwt_error)}")
@@ -125,22 +130,26 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
         try:
             db_user = UserService.get_or_create_user(db, user_data)
         except Exception as db_error:
-            # Database connection or operation error
-            error_msg = f"Database error during login: {str(db_error)}"
-            if "connection" in str(db_error).lower():
-                error_msg = f"Database connection failed: {str(db_error)}"
-            elif "timeout" in str(db_error).lower():
-                error_msg = f"Database connection timeout: {str(db_error)}"
-            elif "authentication" in str(db_error).lower():
-                error_msg = f"Database authentication failed: {str(db_error)}"
-            raise HTTPException(status_code=500, detail=error_msg)
+            # Check if it's a connection error
+            error_str = str(db_error).lower()
+            if any(keyword in error_str for keyword in ['timeout', 'connection', 'network', 'unreachable']):
+                # Database is unavailable - return error with specific message
+                raise HTTPException(
+                    status_code=503, 
+                    detail="Database is currently unavailable. Please try again later."
+                )
+            else:
+                # Other database errors
+                error_msg = f"Database error during login: {str(db_error)}"
+                raise HTTPException(status_code=500, detail=error_msg)
         
         # Create JWT with database user ID
         jwt_user_data = {
             "email": db_user.email,
             "name": db_user.name,
             "picture": db_user.picture_url,
-            "id": db_user.id
+            "id": db_user.id,
+            "role": db_user.role.value
         }
         
         jwt_token = create_jwt(jwt_user_data)

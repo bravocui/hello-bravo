@@ -5,6 +5,7 @@ interface User {
   email: string;
   name: string;
   picture?: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -45,7 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // First check database status
         try {
           const healthResponse = await api.get('/health');
-          setDatabaseAvailable(healthResponse.data.database_available);
+          setDatabaseAvailable(healthResponse.data.database?.available ?? false);
         } catch (error) {
           console.warn('Could not check database status:', error);
           setDatabaseAvailable(false);

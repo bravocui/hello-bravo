@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, JSONResponse
 from fastapi.exceptions import RequestValidationError
 import os
+from datetime import datetime
 
 # Import centralized configuration
 from config import ALLOWED_ORIGINS
@@ -150,10 +151,41 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint"""
+    global database_available
+    
+    # Test database connection
+    db_status = "unknown"
+    db_error = None
+    
+    try:
+        from sqlalchemy import create_engine, text
+        from config import DATABASE_URL
+        
+        engine = create_engine(
+            DATABASE_URL, 
+            pool_pre_ping=True,
+            connect_args={"connect_timeout": 5}  # Shorter timeout for health check
+        )
+        
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT 1"))
+            db_status = "connected"
+            database_available = True
+            
+    except Exception as e:
+        db_status = "disconnected"
+        db_error = str(e)
+        database_available = False
+    
     return {
-        "status": "healthy",
-        "database_available": database_available,
-        "version": "1.0.0"
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": {
+            "status": db_status,
+            "available": database_available,
+            "error": db_error
+        },
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 # Catch-all route to serve React app for client-side routing

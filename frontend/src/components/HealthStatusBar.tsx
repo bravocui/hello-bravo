@@ -4,8 +4,12 @@ import api from '../config/api';
 
 interface HealthStatus {
   status: string;
-  database_available: boolean;
-  version: string;
+  database: {
+    status: string;
+    available: boolean;
+    error: string | null;
+  };
+  timestamp: string;
 }
 
 const HealthStatusBar: React.FC = () => {
@@ -64,7 +68,7 @@ const HealthStatusBar: React.FC = () => {
     return null;
   }
 
-  const isHealthy = healthStatus.status === 'healthy' && healthStatus.database_available;
+  const isHealthy = healthStatus.status === 'healthy' && healthStatus.database.available;
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 border-t px-4 py-2 text-xs ${
@@ -80,8 +84,8 @@ const HealthStatusBar: React.FC = () => {
         )}
         <span>
           Backend: {healthStatus.status} | 
-          Database: {healthStatus.database_available ? 'Connected' : 'Disconnected'} | 
-          v{healthStatus.version}
+          Database: {healthStatus.database.available ? 'Connected' : 'Disconnected'} | 
+          v{healthStatus.timestamp}
         </span>
       </div>
     </div>

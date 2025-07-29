@@ -22,7 +22,7 @@ def load_environment():
 ENVIRONMENT = load_environment()
 
 # Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/life_tracker")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/life_tracker")
 
 # JWT configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")

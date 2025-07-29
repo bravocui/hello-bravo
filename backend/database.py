@@ -39,13 +39,18 @@ print("✅ SQLAlchemy Base class created")
 
 # Dependency to get database session
 def get_db():
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         print("🔗 Database session created")
         yield db
     except Exception as e:
         print(f"❌ Database session error: {e}")
+        print(f"🔗 Database URL: {DATABASE_URL}")
+        db.rollback()
         raise
     finally:
-        db.close()
-        print("🔗 Database session closed") 
+        try:
+            db.close()
+            print("🔗 Database session closed")
+        except Exception as close_error:
+            print(f"⚠️ Error closing database session: {close_error}") 

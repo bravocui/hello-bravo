@@ -1,7 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Float, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, Float, Date, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+import enum
+
+class UserRole(enum.Enum):
+    ADMIN = "admin"
+    REGULAR = "regular"
+    READONLY = "readonly"
 
 class User(Base):
     __tablename__ = "users"
@@ -10,6 +16,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     name = Column(String(255), nullable=False)
     picture_url = Column(Text)
+    role = Column(Enum(UserRole), default=UserRole.REGULAR, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
