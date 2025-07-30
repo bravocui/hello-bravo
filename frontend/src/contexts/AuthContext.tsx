@@ -33,6 +33,10 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Token storage keys
+const AUTH_TOKEN_KEY = 'auth_token';
+const USER_DATA_KEY = 'user_data';
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +73,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Function to save token to localStorage
+  const saveTokenToStorage = (token: string, userData: User) => {
+    try {
+      localStorage.setItem(AUTH_TOKEN_KEY, token);
+      localStorage.setItem(USER_DATA_KEY, JSON.stringify(userData));
+      console.log('💾 Token saved to localStorage');
+    } catch (error) {
+      console.warn('Failed to save token to localStorage:', error);
+    }
+  };
+
+  // Function to load token from localStorage
+  const loadTokenFromStorage = (): { token: string | null; userData: User | null } => {
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      const userDataStr = localStorage.getItem(USER_DATA_KEY);
+      const userData = userDataStr ? JSON.parse(userDataStr) : null;
+      
+      if (token && userData) {
+        console.log('💾 Token loaded from localStorage');
+        return { token, userData };
+      }
+    } catch (error) {
+      console.warn('Failed to load token from localStorage:', error);
+    }
+    return { token: null, userData: null };
+  };
+
+  // Function to clear token from localStorage
+  const clearTokenFromStorage = () => {
+    try {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      localStorage.removeItem(USER_DATA_KEY);
+      console.log('🗑️ Token cleared from localStorage');
+    } catch (error) {
+      console.warn('Failed to clear token from localStorage:', error);
+    }
+  };
+
   useEffect(() => {
     // Only check auth once on mount
     if (hasCheckedAuth) return;
@@ -78,11 +121,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // First check database status
         await checkDatabaseStatus();
         
-        // Then check user auth
+        // Try to load token from localStorage first
+        const { token: storedToken, userData: storedUser } = loadTokenFromStorage();
+        
+        if (storedToken && storedUser) {
+          // Set the token in the header and state
+          setAuthToken(storedToken);
+          setAuthHeader(storedToken);
+          setUser(storedUser);
+          console.log('🔑 Restored authentication from localStorage');
+        }
+        
+        // Always verify with the server to ensure token is still valid
         const response = await api.get('/user/profile');
-        setUser(response.data);
+        const serverUser = response.data;
+        
+        // Update with fresh user data from server
+        setUser(serverUser);
+        
+        // If we had a stored token but server user is different, update storage
+        if (storedToken && (!storedUser || storedUser.email !== serverUser.email)) {
+          saveTokenToStorage(storedToken, serverUser);
+        }
+        
       } catch (error) {
+        console.log('❌ Authentication check failed, clearing stored data');
         setUser(null);
+        setAuthToken(null);
+        setAuthHeader(null);
+        clearTokenFromStorage();
       } finally {
         setLoading(false);
         setHasCheckedAuth(true);
@@ -102,14 +169,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await api.post('/auth/google', { token });
       const { user: userData, token: authToken } = response.data;
+      
+      // Save to state and localStorage
       setUser(userData);
       setAuthToken(authToken);
       setAuthHeader(authToken);
+      saveTokenToStorage(authToken, userData);
+      
       console.log('🔑 Login successful, token stored');
     } catch (error) {
       setUser(null);
       setAuthToken(null);
       setAuthHeader(null);
+      clearTokenFromStorage();
       throw error;
     }
   };
@@ -123,6 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setAuthToken(null);
     setAuthHeader(null);
+    clearTokenFromStorage();
   };
 
   const value: AuthContextType = {
