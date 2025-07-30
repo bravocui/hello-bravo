@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Activity, Plus, Calendar, Clock, Flame } from 'lucide-react';
 import api from '../config/api';
 import Header from './Header';

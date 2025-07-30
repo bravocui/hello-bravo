@@ -50,7 +50,6 @@ const AccountingPage: React.FC = () => {
     editForm,
     setEditForm,
     editLoading,
-    addLoading,
     deleteLoading,
     showAIAssistant,
     setShowAIAssistant,
