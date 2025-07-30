@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 
 # Import centralized configuration
-from config import ALLOWED_ORIGINS
+from config import ALLOWED_ORIGINS, ENVIRONMENT
 
 # Import models and auth
 from models import User

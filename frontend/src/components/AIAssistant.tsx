@@ -26,19 +26,20 @@ interface AIAssistantProps {
   creditCards: Array<{id: number, name: string, owner: string}>;
 }
 
-const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, currentUser, currentCreditCard, users, creditCards }) => {
+const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, currentUser, currentCreditCard = '', users, creditCards }) => {
   const [prompt, setPrompt] = useState('');
-  const [images, setImages] = useState<File[]>([]);
+  const [image, setImage] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [aiResponse, setAiResponse] = useState<AIAssistantResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingEntries, setEditingEntries] = useState<ExpenseEntry[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedUser, setSelectedUser] = useState(currentUser || '');
-  const [selectedCreditCard, setSelectedCreditCard] = useState(currentCreditCard || '');
+  const [selectedCreditCard, setSelectedCreditCard] = useState('');
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -51,12 +52,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    setImages(prev => [...prev, ...imageFiles]);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    if (imageFile) {
+      setImage(imageFile);
+    }
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  const removeImage = () => {
+    setImage(null);
   };
 
   const handleDragOver = (event: React.DragEvent) => {
@@ -74,13 +77,15 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
     setIsDragOver(false);
     
     const files = Array.from(event.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    setImages(prev => [...prev, ...imageFiles]);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    if (imageFile) {
+      setImage(imageFile);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!prompt.trim() && images.length === 0) {
-      setError('Please provide either text or images to process');
+    if (!prompt.trim() && !image) {
+      setError('Please provide either text or an image to process');
       return;
     }
 
@@ -92,9 +97,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
       const formData = new FormData();
       formData.append('prompt', prompt);
       
-      images.forEach((image, index) => {
+      if (image) {
         formData.append('images', image);
-      });
+      }
 
       const response = await api.post('/ai-assistant/process-expense', formData, {
         headers: {
@@ -134,7 +139,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
     
     try {
       await onConfirmEntries(editingEntries, selectedUser, selectedCreditCard);
-      onClose();
+      setShowSuccessPopup(true);
     } catch (err: any) {
       setSubmitError(err.response?.data?.detail || err.message || 'Failed to add entries');
     } finally {
@@ -165,7 +170,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
           if (item.type.indexOf('image') !== -1) {
             const file = item.getAsFile();
             if (file) {
-              setImages(prev => [...prev, file]);
+              setImage(file);
             }
           }
         }
@@ -206,7 +211,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">AI Expense Assistant</h2>
-              <p className="text-sm text-gray-600">Upload images or paste text to automatically extract expenses</p>
+              <p className="text-sm text-gray-600">Upload an image or paste text to automatically extract expenses</p>
             </div>
           </div>
           <button
@@ -238,7 +243,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
               {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload images (receipts, statements, etc.)
+                  Upload an image (receipt, statement, etc.)
                 </label>
                 <div 
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
@@ -253,7 +258,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                   <input
                     ref={fileInputRef}
                     type="file"
-                    multiple
                     accept="image/*"
                     onChange={handleImageUpload}
                     className="hidden"
@@ -264,34 +268,32 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                       className="flex items-center justify-center space-x-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors"
                     >
                       <Upload className="w-4 h-4" />
-                      <span>Choose Images</span>
+                      <span>Choose Image</span>
                     </button>
                     <div className="text-sm text-gray-500">
-                      <p>Or drag and drop images here</p>
-                      <p>Or paste images from clipboard (Ctrl+V / Cmd+V)</p>
+                      <p>Or drag and drop an image here</p>
+                      <p>Or paste an image from clipboard (Ctrl+V / Cmd+V)</p>
                       <p className="text-xs mt-1">Supports JPG, PNG, GIF up to 10MB each</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Image Previews */}
-                {images.length > 0 && (
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={URL.createObjectURL(image)}
-                          alt={`Upload ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border border-gray-200"
-                        />
-                        <button
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+                {/* Image Preview */}
+                {image && (
+                  <div className="mt-4">
+                    <div className="relative group">
+                      <img
+                        src={URL.createObjectURL(image)}
+                        alt="Uploaded image"
+                        className="w-full max-w-md h-48 object-cover rounded-lg border border-gray-200"
+                      />
+                      <button
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -313,7 +315,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
               <div className="flex justify-end">
                 <button
                   onClick={handleSubmit}
-                  disabled={isProcessing || (!prompt.trim() && images.length === 0)}
+                  disabled={isProcessing || (!prompt.trim() && !image)}
                   className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isProcessing ? (
@@ -386,6 +388,44 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Owner <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                      className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                        !selectedUser ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Owner</option>
+                      {users.map(user => (
+                        <option key={user.id} value={user.name}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Credit Card <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={selectedCreditCard}
+                      onChange={(e) => setSelectedCreditCard(e.target.value)}
+                      className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                        !selectedCreditCard ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select Credit Card</option>
+                      {creditCards.map(card => (
+                        <option key={card.id} value={card.name}>
+                          {card.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
                       Year <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -434,44 +474,6 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                       ].map(month => (
                         <option key={month.value} value={month.value}>
                           {month.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Credit Card <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={selectedCreditCard}
-                      onChange={(e) => setSelectedCreditCard(e.target.value)}
-                      className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        !selectedCreditCard ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Select Credit Card</option>
-                      {creditCards.map(card => (
-                        <option key={card.id} value={card.name}>
-                          {card.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Owner <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={selectedUser}
-                      onChange={(e) => setSelectedUser(e.target.value)}
-                      className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        !selectedUser ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
-                    >
-                      <option value="">Select Owner</option>
-                      {users.map(user => (
-                        <option key={user.id} value={user.name}>
-                          {user.name}
                         </option>
                       ))}
                     </select>
@@ -623,9 +625,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
         <h4 className="text-sm font-medium text-gray-700 mb-2">Full Prompt Sent to AI</h4>
         <div className="text-xs text-gray-600 bg-white p-3 rounded border max-h-60 overflow-y-auto">
           <pre className="whitespace-pre-wrap">{aiResponse.full_prompt}</pre>
-          {images.length > 0 && (
+          {image && (
             <div className="mt-2 text-gray-500">
-              <strong>Images:</strong> {images.length} file(s) uploaded
+              <strong>Image:</strong> 1 file uploaded
             </div>
           )}
         </div>
@@ -644,6 +646,34 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
 )}
         </div>
       </div>
+
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Items Added Successfully
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {editingEntries.length} expense(s) have been added to your ledger.
+              </p>
+              <button
+                onClick={() => {
+                  setShowSuccessPopup(false);
+                  onClose();
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

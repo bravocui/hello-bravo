@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3, Edit, Save, X, Plus, Trash2, RotateCcw, Bot } from 'lucide-react';
+import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3, Edit, Save, X, Plus, Trash2, RotateCcw, Bot, ArrowUpDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import api from '../config/api';
 import Header from './Header';
@@ -1041,35 +1041,40 @@ const AccountingPage: React.FC = () => {
             <div className="flex items-center space-x-3">
               <button
                 onClick={resetTableSort}
-                className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-                title="Reset table sort to default order (Year ↓ Month ↓ User → Card → Category)"
+                className="group relative flex items-center bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors"
               >
-                <RotateCcw className="w-4 h-4" />
-                <span className="text-sm">Reset Sort</span>
+                <ArrowUpDown className="w-4 h-4" />
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  Reset Sort
+                </span>
               </button>
               <button
                 onClick={() => setShowAIAssistant(true)}
                 disabled={dataSource === 'mock'}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                className={`group relative flex items-center px-4 py-2 rounded-lg transition-colors ${
                   dataSource === 'mock' 
                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
-                title="Use AI to automatically extract expenses from text or images"
               >
                 <Bot className="w-4 h-4" />
-                <span className="text-sm">AI Assistant</span>
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  AI Assistant
+                </span>
               </button>
               <button
                 onClick={startAdding}
                 disabled={dataSource === 'mock'}
-                className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+                className={`group relative flex items-center px-4 py-2 rounded-lg transition-colors ${
                   dataSource === 'mock' 
                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                     : 'bg-accounting-600 text-white hover:bg-accounting-700'
                 }`}
               >
                 <Plus className="w-4 h-4" />
+                <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  Add Expense
+                </span>
               </button>
             </div>
           </div>
@@ -1364,12 +1369,6 @@ const AccountingPage: React.FC = () => {
             currentUser={(() => {
               const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
               return currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
-            })()}
-            currentCreditCard={(() => {
-              const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
-              const defaultUserName = currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
-              const userCreditCards = getCreditCardsForUser(defaultUserName);
-              return userCreditCards.length > 0 ? userCreditCards[0].name : '';
             })()}
             users={users}
             creditCards={creditCards}

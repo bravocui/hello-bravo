@@ -40,6 +40,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     };
   });
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -95,7 +96,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         }));
       
       onConfirmEntries(entries);
-      onClose();
+      setShowSuccessPopup(true);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to add entries');
     }
@@ -299,6 +300,34 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Success Popup */}
+      {showSuccessPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">✅</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Items Added Successfully
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Your expense entries have been added to your ledger.
+              </p>
+              <button
+                onClick={() => {
+                  setShowSuccessPopup(false);
+                  onClose();
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
