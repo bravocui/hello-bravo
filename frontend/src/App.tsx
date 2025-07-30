@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import FitnessPage from './components/FitnessPage';
 import TravelPage from './components/TravelPage';
 import WeatherPage from './components/WeatherPage';
-import AccountingPage from './components/AccountingPage';
+import AccountingPage from './components/accounting/AccountingPage';
 import AdminPortal from './components/AdminPortal';
 import HealthStatusBar from './components/HealthStatusBar';
 import SimpleTest from './SimpleTest';

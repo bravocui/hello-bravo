@@ -71,7 +71,7 @@ python main.py
 #### Frontend Components
 
 - `AIAssistant.tsx`: Main AI assistant modal component
-- Integrated into `AccountingPage.tsx` with AI assistant button
+- Integrated into `LedgerPage.tsx` with AI assistant button
 
 ## API Response Format
 

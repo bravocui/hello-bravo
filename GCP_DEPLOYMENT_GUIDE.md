@@ -22,7 +22,7 @@ gcloud auth login
 gcloud config set project YOUR_PROJECT_ID
 ```
 
-### 3. Enable Required APIs
+### 3. Enable Required APIs if not already
 ```bash
 gcloud services enable cloudbuild.googleapis.com
 gcloud services enable run.googleapis.com
