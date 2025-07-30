@@ -23,7 +23,7 @@ const AccountingPage: React.FC = () => {
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<string>('all-time');
+  const [timeRange, setTimeRange] = useState<string>('year-to-date');
   const [selectedUser, setSelectedUser] = useState<string>('all-users');
   const [sortBy, setSortBy] = useState<'category' | 'amount' | 'percentage'>('amount');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -128,6 +128,29 @@ const AccountingPage: React.FC = () => {
     if (categoryLower.includes('shopping')) return '#ec4899'; // pink
     if (categoryLower.includes('bills')) return '#8b5cf6'; // purple
     return '#6b7280'; // gray
+  };
+
+  const getUserCardColor = (userCardKey: string) => {
+    const colors = [
+      '#3B82F6', // blue
+      '#EF4444', // red
+      '#10B981', // green
+      '#F59E0B', // yellow
+      '#8B5CF6', // purple
+      '#F97316', // orange
+      '#06B6D4', // cyan
+      '#84CC16', // lime
+      '#EC4899', // pink
+      '#6366F1', // indigo
+    ];
+    
+    // Simple hash function to get consistent color for user+card combination
+    let hash = 0;
+    for (let i = 0; i < userCardKey.length; i++) {
+      hash = ((hash << 5) - hash) + userCardKey.charCodeAt(i);
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return colors[Math.abs(hash) % colors.length];
   };
 
   // Helper function to get credit cards for a specific user
@@ -419,7 +442,56 @@ const AccountingPage: React.FC = () => {
     return acc;
   }, {} as Record<string, number>);
 
+  // Group by user+card combination
+  const userCardTotals = filteredData.reduce((acc, entry) => {
+    const key = `${entry.user_name}+${entry.credit_card}`;
+    if (!acc[key]) {
+      acc[key] = 0;
+    }
+    acc[key] += entry.amount;
+    return acc;
+  }, {} as Record<string, number>);
 
+
+
+  // Helper function to get all months in the selected time range
+  const getAllMonthsInRange = () => {
+    const months: Array<{year: number, month: number}> = [];
+    const currentYear = new Date().getFullYear();
+    
+    switch (timeRange) {
+      case 'all-time':
+        // For all-time, get all years and months from the data
+        const allYears = new Set(filteredData.map(entry => entry.year));
+        allYears.forEach(year => {
+          for (let month = 1; month <= 12; month++) {
+            months.push({ year, month });
+          }
+        });
+        break;
+      case 'year-to-date':
+        // For YTD, get all months from current year up to current month
+        const currentMonth = new Date().getMonth() + 1;
+        for (let month = 1; month <= currentMonth; month++) {
+          months.push({ year: currentYear, month });
+        }
+        break;
+      default:
+        // For specific year
+        if (timeRange.match(/^\d{4}$/)) {
+          const year = parseInt(timeRange);
+          for (let month = 1; month <= 12; month++) {
+            months.push({ year, month });
+          }
+        }
+        break;
+    }
+    
+    return months.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
+  };
 
   // Create histogram data for categories
   const createHistogramData = (category: string) => {
@@ -433,20 +505,45 @@ const AccountingPage: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
     
-    return Object.entries(monthlyData)
-      .map(([key, amount]) => {
-        const [year, month] = key.split('-').map(Number);
-        return {
-          month: `${year}/${month.toString().padStart(2, '0')}`,
-          amount,
-          percentage: (amount / categoryTotals[category]) * 100
-        };
-      })
-      .sort((a, b) => {
-        const [yearA, monthA] = a.month.split('/');
-        const [yearB, monthB] = b.month.split('/');
-        return new Date(`${monthA}/1/${yearA}`).getTime() - new Date(`${monthB}/1/${yearB}`).getTime();
-      });
+    const allMonths = getAllMonthsInRange();
+    
+    return allMonths.map(({ year, month }) => {
+      const key = `${year}-${month}`;
+      const amount = monthlyData[key] || 0;
+      return {
+        month: `${year}/${month.toString().padStart(2, '0')}`,
+        amount,
+        percentage: categoryTotals[category] > 0 ? (amount / categoryTotals[category]) * 100 : 0
+      };
+    });
+  };
+
+  // Create histogram data for user+card combinations
+  const createUserCardHistogramData = (userCardKey: string) => {
+    const [userName, cardName] = userCardKey.split('+');
+    const userCardEntries = filteredData.filter(entry => 
+      entry.user_name === userName && entry.credit_card === cardName
+    );
+    const monthlyData = userCardEntries.reduce((acc, entry) => {
+      const key = `${entry.year}-${entry.month}`;
+      if (!acc[key]) {
+        acc[key] = 0;
+      }
+      acc[key] += entry.amount;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const allMonths = getAllMonthsInRange();
+    
+    return allMonths.map(({ year, month }) => {
+      const key = `${year}-${month}`;
+      const amount = monthlyData[key] || 0;
+      return {
+        month: `${year}/${month.toString().padStart(2, '0')}`,
+        amount,
+        percentage: userCardTotals[userCardKey] > 0 ? (amount / userCardTotals[userCardKey]) * 100 : 0
+      };
+    });
   };
 
   if (loading) {
@@ -1009,21 +1106,77 @@ const AccountingPage: React.FC = () => {
         {selectedView === 'credit-card-details' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex items-center space-x-3 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900">Expenses by Credit Card</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Expenses by User + Credit Card</h2>
             <div className="w-8 h-8 bg-accounting-100 rounded-lg flex items-center justify-center">
               <CreditCard className="w-4 h-4 text-accounting-600" />
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(creditCardTotals).map(([card, total]) => (
-              <div key={card} className="border border-gray-200 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 mb-2">{card}</h3>
-                <p className="text-lg font-semibold text-red-600">
-                  {formatCurrency(total)}
-                </p>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {Object.entries(userCardTotals).map(([userCardKey, total]) => {
+              const [userName, cardName] = userCardKey.split('+');
+              const histogramData = createUserCardHistogramData(userCardKey);
+              return (
+                <div key={userCardKey} className="grid grid-cols-1 lg:grid-cols-5 gap-4 border border-gray-200 rounded-lg p-4">
+                  {/* Left Block - Total */}
+                  <div className="lg:col-span-2 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">💳</span>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">{userName}</h3>
+                        <p className="text-sm text-gray-600">{cardName}</p>
+                        <p className="text-2xl font-bold text-red-600">
+                          {formatCurrency(total)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Right Block - Chart Visualization */}
+                  <div className="lg:col-span-3">
+                    <div className="h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={histogramData} margin={{ top: 5, right: 5, left: 5, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis 
+                            dataKey="month" 
+                            tick={{ fontSize: 10, fill: '#6B7280' }}
+                            axisLine={false} 
+                            tickLine={false}
+                            height={30}
+                          />
+                          <YAxis 
+                            tickFormatter={(value: number) => `${value / 1000}k`} 
+                            tick={{ fontSize: 10, fill: '#6B7280' }}
+                            axisLine={false} 
+                            tickLine={false}
+                            width={30}
+                          />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-white p-2 border border-gray-200 rounded shadow text-xs">
+                                    <p className="font-medium">{data.month}</p>
+                                    <p className="text-accounting-600">
+                                      ${data.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                            cursor={{fill: 'rgba(239, 246, 255, 0.5)'}}
+                          />
+                          <Bar dataKey="amount" radius={[2, 2, 0, 0]} fill={getUserCardColor(userCardKey)} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
         )}
