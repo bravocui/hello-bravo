@@ -10,7 +10,18 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Enable sending cookies with requests
+  // Enable sending cookies with requests for auth endpoints only
+  withCredentials: true,
+});
+
+// Create a separate axios instance for health checks (no credentials needed)
+const healthApi = axios.create({
+  baseURL: API_URL,
+  timeout: 10000, // Shorter timeout for health checks
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  // Try with credentials for health checks (some servers require it)
   withCredentials: true,
 });
 
@@ -42,4 +53,5 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
+export default api;
+export { healthApi }; 

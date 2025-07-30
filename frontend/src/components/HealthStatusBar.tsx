@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Monitor, Server } from 'lucide-react';
-import api from '../config/api';
+import { healthApi } from '../config/api';
 
 interface HealthStatus {
   status: string;
@@ -35,12 +35,17 @@ const HealthStatusBar: React.FC = () => {
         setLoading(true);
         setError(null);
         
-        const response = await api.get('/health');
+        console.log('🔍 Checking health at:', healthApi.defaults.baseURL);
+        const response = await healthApi.get('/health');
         console.log('🔍 Health check response:', response.data);
         setHealthStatus(response.data);
-      } catch (err) {
-        setError('Failed to check backend health');
+      } catch (err: any) {
         console.error('Health check failed:', err);
+        if (err.response) {
+          console.error('Response status:', err.response.status);
+          console.error('Response data:', err.response.data);
+        }
+        setError('Failed to check backend health');
       } finally {
         setLoading(false);
       }

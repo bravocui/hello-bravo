@@ -34,18 +34,12 @@ database_available = False
 async def test_database_connection():
     global database_available
     try:
-        from sqlalchemy import create_engine, text
+        from database import engine
+        from sqlalchemy import text
         from config import DATABASE_URL
         
         print("🔍 Testing database connection...")
         print(f"   URL: {DATABASE_URL}")
-        
-        # Create engine with connection timeout
-        engine = create_engine(
-            DATABASE_URL, 
-            pool_pre_ping=True,
-            connect_args={"connect_timeout": 10}  # 10 second timeout
-        )
         
         print("   ⏳ Attempting to connect...")
         
@@ -179,32 +173,29 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with optimized database check"""
     global database_available
     
-    # Test database connection
-    db_status = "unknown"
+    # Use cached database status to reduce connection overhead
+    db_status = "connected" if database_available else "disconnected"
     db_error = None
     
-    try:
-        from sqlalchemy import create_engine, text
-        from config import DATABASE_URL, ENVIRONMENT
-        
-        engine = create_engine(
-            DATABASE_URL, 
-            pool_pre_ping=True,
-            connect_args={"connect_timeout": 5}  # Shorter timeout for health check
-        )
-        
-        with engine.connect() as connection:
-            result = connection.execute(text("SELECT 1"))
-            db_status = "connected"
-            database_available = True
+    # Only do a full database check if we haven't established connection yet
+    if not database_available:
+        try:
+            from database import engine
+            from sqlalchemy import text
             
-    except Exception as e:
-        db_status = "disconnected"
-        db_error = str(e)
-        database_available = False
+            # Use existing engine from database module
+            with engine.connect() as connection:
+                result = connection.execute(text("SELECT 1"))
+                db_status = "connected"
+                database_available = True
+                
+        except Exception as e:
+            db_status = "disconnected"
+            db_error = str(e)
+            database_available = False
     
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
@@ -216,6 +207,25 @@ async def health_check():
         "environment": ENVIRONMENT,
         "timestamp": datetime.utcnow().isoformat()
     }
+
+@app.get("/debug/pool-status")
+async def get_pool_status():
+    """Get database connection pool status for debugging"""
+    try:
+        from database import get_pool_status
+        pool_info = get_pool_status()
+        
+        return {
+            "pool_status": pool_info,
+            "environment": ENVIRONMENT,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "environment": ENVIRONMENT,
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
 # Catch-all route to serve React app for client-side routing
 @app.get("/{full_path:path}")

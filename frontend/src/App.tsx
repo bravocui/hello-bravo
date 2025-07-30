@@ -9,6 +9,7 @@ import WeatherPage from './components/WeatherPage';
 import AccountingPage from './components/AccountingPage';
 import AdminPortal from './components/AdminPortal';
 import HealthStatusBar from './components/HealthStatusBar';
+import SimpleTest from './SimpleTest';
 import './index.css';
 
 // Protected Route component
@@ -170,6 +171,10 @@ const AppContent: React.FC = () => {
               <AdminPortal />
             </AdminRoute>
           } 
+        />
+        <Route 
+          path="/test" 
+          element={<SimpleTest />} 
         />
       </Routes>
       <HealthStatusBar />

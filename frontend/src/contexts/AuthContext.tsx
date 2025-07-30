@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '../config/api';
+import api, { healthApi } from '../config/api';
 
 interface User {
   email: string;
@@ -43,12 +43,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Function to check database status
   const checkDatabaseStatus = async () => {
     try {
-      const healthResponse = await api.get('/health');
+      console.log('🔍 Checking database status at:', healthApi.defaults.baseURL);
+      const healthResponse = await healthApi.get('/health');
       const isAvailable = healthResponse.data.database?.available ?? false;
       setDatabaseAvailable(isAvailable);
       console.log('🔍 Database status updated:', isAvailable);
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Could not check database status:', error);
+      if (error.response) {
+        console.warn('Response status:', error.response.status);
+        console.warn('Response data:', error.response.data);
+      }
       setDatabaseAvailable(false);
     }
   };
