@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3, Edit, Save, X, Plus, Trash2, RotateCcw } from 'lucide-react';
+import { DollarSign, PieChart as PieChartIcon, CreditCard, User, Calendar, BarChart3, Edit, Save, X, Plus, Trash2, RotateCcw, Bot } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import api from '../config/api';
 import Header from './Header';
+import AIAssistant from './AIAssistant';
+import AddExpenseModal from './AddExpenseModal';
 
 interface LedgerEntry {
   id: number;
@@ -15,14 +17,7 @@ interface LedgerEntry {
   notes?: string;
 }
 
-interface AddExpenseForm {
-  year?: number;
-  month?: number;
-  user_name?: string;
-  credit_card?: string;
-  categoryAmounts?: { [category: string]: number };
-  hiddenCategories?: Set<string>;
-}
+
 
 const AccountingPage: React.FC = () => {
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
@@ -39,13 +34,13 @@ const AccountingPage: React.FC = () => {
   const [editingEntry, setEditingEntry] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<LedgerEntry>>({});
   const [editLoading, setEditLoading] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState<AddExpenseForm>({});
   const [addLoading, setAddLoading] = useState(false);
   const [users, setUsers] = useState<Array<{id: number, name: string, email: string}>>([]);
   const [creditCards, setCreditCards] = useState<Array<{id: number, name: string, owner: string}>>([]);
   const [spendingCategories, setSpendingCategories] = useState<Array<{id: number, category_name: string}>>([]);
   const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
   const fetchLedgerData = useCallback(async () => {
     try {
@@ -230,79 +225,10 @@ const AccountingPage: React.FC = () => {
     if (dataSource === 'mock') {
       return; // Disable adding for mock data
     }
-    const now = new Date();
-    // Get current user from localStorage or default to first user
-    const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
-    const defaultUserName = currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
-    
-    setAddForm({
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-      user_name: defaultUserName,
-      credit_card: '',
-      categoryAmounts: {},
-      hiddenCategories: new Set()
-    });
-    setShowAddForm(true);
+    setShowAddExpenseModal(true);
   };
 
-  const cancelAdding = () => {
-    setShowAddForm(false);
-    setAddForm({});
-  };
 
-  const handleAddEntry = async () => {
-    try {
-      setAddLoading(true);
-      
-      // Validate required fields
-      if (!addForm.year || !addForm.month || !addForm.user_name || !addForm.credit_card || !addForm.categoryAmounts) {
-        setError('Please fill in all required fields');
-        return;
-      }
-      
-      // Get total amount and check if any categories have amounts
-      const totalAmount = Object.values(addForm.categoryAmounts).reduce((sum, amount) => sum + amount, 0);
-      if (totalAmount === 0) {
-        setError('Please enter amounts for at least one category');
-        return;
-      }
-      
-      // Create entries for each category with an amount
-      const entries = Object.entries(addForm.categoryAmounts)
-        .filter(([category, amount]) => amount > 0)
-        .map(([category, amount]) => ({
-          year: addForm.year,
-          month: addForm.month,
-          user_name: addForm.user_name,
-          credit_card: addForm.credit_card,
-          category: category,
-          amount: amount,
-          notes: ''
-        }));
-      
-      // Add all entries using batch endpoint
-      const response = await api.post('/ledger/entries/batch', { entries });
-      
-      // Add the new entries to the beginning of the list
-      const newEntries = response.data;
-      setLedgerData(prevData => [...newEntries, ...prevData]);
-      
-      // Reset form
-      setAddForm({});
-      setShowAddForm(false);
-      setError(null);
-    } catch (err: any) {
-      if (err.response?.status === 409) {
-        // Handle duplicate entry error
-        setError(`Duplicate entries detected: ${err.response.data.detail}. Please edit the existing entries instead.`);
-      } else {
-        setError(err.response?.data?.detail || 'Failed to add entries');
-      }
-    } finally {
-      setAddLoading(false);
-    }
-  };
 
   const handleDeleteEntry = async (entryId: number) => {
     if (dataSource === 'mock') {
@@ -325,6 +251,62 @@ const AccountingPage: React.FC = () => {
       setError(err.response?.data?.detail || 'Failed to delete entry');
     } finally {
       setDeleteLoading(null);
+    }
+  };
+
+  const handleAIAssistantEntries = async (entries: any[], selectedUser?: string, selectedCreditCard?: string) => {
+    // Use selected user and credit card, or fall back to defaults
+    const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
+    const defaultUserName = selectedUser || currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
+    const userCreditCards = getCreditCardsForUser(defaultUserName);
+    const defaultCreditCard = selectedCreditCard || (userCreditCards.length > 0 ? userCreditCards[0].name : '');
+    
+    // Get current date for default year/month
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    // Convert AI entries to ledger entries
+    const ledgerEntries = entries.map(entry => ({
+      year: entry.year || currentYear,
+      month: entry.month || currentMonth,
+      user_name: defaultUserName,
+      credit_card: defaultCreditCard,
+      category: entry.category,
+      amount: entry.amount,
+      notes: entry.notes || ''
+    }));
+    
+    // Add entries using batch endpoint
+    const response = await api.post('/ledger/entries/batch', { entries: ledgerEntries });
+    
+    // Add the new entries to the beginning of the list
+    const newEntries = response.data;
+    setLedgerData(prevData => [...newEntries, ...prevData]);
+    
+    setError(null);
+  };
+
+  const handleManualAddEntries = async (entries: any[]) => {
+    try {
+      setAddLoading(true);
+      
+      // Add entries using batch endpoint
+      const response = await api.post('/ledger/entries/batch', { entries: entries });
+      
+      // Add the new entries to the beginning of the list
+      const newEntries = response.data;
+      setLedgerData(prevData => [...newEntries, ...prevData]);
+      
+      setError(null);
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        setError(`Duplicate entries detected: ${err.response.data.detail}. Please edit the existing entries instead.`);
+      } else {
+        setError(err.response?.data?.detail || 'Failed to add manual entries');
+      }
+    } finally {
+      setAddLoading(false);
     }
   };
 
@@ -1066,6 +1048,19 @@ const AccountingPage: React.FC = () => {
                 <span className="text-sm">Reset Sort</span>
               </button>
               <button
+                onClick={() => setShowAIAssistant(true)}
+                disabled={dataSource === 'mock'}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  dataSource === 'mock' 
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+                title="Use AI to automatically extract expenses from text or images"
+              >
+                <Bot className="w-4 h-4" />
+                <span className="text-sm">AI Assistant</span>
+              </button>
+              <button
                 onClick={startAdding}
                 disabled={dataSource === 'mock'}
                 className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
@@ -1079,183 +1074,7 @@ const AccountingPage: React.FC = () => {
             </div>
           </div>
             
-            {/* Add New Expense Form */}
-            {showAddForm && (
-              <div className="mb-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Expense</h3>
-                
-                {/* First Row: Year, Month, User, Credit Card */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                    <input
-                      type="number"
-                      value={addForm.year || ''}
-                      onChange={(e) => setAddForm({...addForm, year: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-                    <select
-                      value={addForm.month || ''}
-                      onChange={(e) => setAddForm({...addForm, month: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
-                    >
-                      {[
-                        { value: 1, label: 'January' },
-                        { value: 2, label: 'February' },
-                        { value: 3, label: 'March' },
-                        { value: 4, label: 'April' },
-                        { value: 5, label: 'May' },
-                        { value: 6, label: 'June' },
-                        { value: 7, label: 'July' },
-                        { value: 8, label: 'August' },
-                        { value: 9, label: 'September' },
-                        { value: 10, label: 'October' },
-                        { value: 11, label: 'November' },
-                        { value: 12, label: 'December' }
-                      ].map(month => (
-                        <option key={month.value} value={month.value}>
-                          {month.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
-                    <select
-                      value={addForm.user_name || ''}
-                      onChange={(e) => setAddForm({...addForm, user_name: e.target.value, credit_card: ''})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
-                    >
-                      <option value="">Select User</option>
-                      {Array.isArray(users) && users.map(user => (
-                        <option key={user.id} value={user.name}>{user.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Credit Card</label>
-                    <select
-                      value={addForm.credit_card || ''}
-                      onChange={(e) => setAddForm({...addForm, credit_card: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500"
-                    >
-                      <option value="">Select Credit Card</option>
-                      {addForm.user_name ? (
-                        getCreditCardsForUser(addForm.user_name).length > 0 ? (
-                          getCreditCardsForUser(addForm.user_name).map(card => (
-                            <option key={card.id} value={card.name}>{card.name}</option>
-                          ))
-                        ) : (
-                          <option value="" disabled>No credit cards for this user</option>
-                        )
-                      ) : (
-                        <option value="" disabled>Select a user first</option>
-                      )}
-                    </select>
-                  </div>
-                </div>
 
-                {/* Category Amounts Section */}
-                <div className="mb-6">
-                  <h4 className="text-md font-medium text-gray-900 mb-3">Category Amounts</h4>
-                  {getCategoryNames().length === 0 ? (
-                    <div className="text-center py-6 text-gray-500">
-                      No spending categories available. Please add categories in the Admin Portal first.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {getCategoryNames()
-                        .filter(category => !addForm.hiddenCategories?.has(category))
-                        .map((category, index) => (
-                      <div key={category} className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
-                        <div className="flex items-center space-x-2 flex-1">
-                          <span className="text-lg">{getCategoryIcon(category)}</span>
-                          <span className="font-medium text-gray-900">{category}</span>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              placeholder="0.00"
-                              value={addForm.categoryAmounts?.[category] || ''}
-                              onChange={(e) => {
-                                const newAmounts = { ...addForm.categoryAmounts, [category]: parseFloat(e.target.value) || 0 };
-                                setAddForm({...addForm, categoryAmounts: newAmounts});
-                              }}
-                              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accounting-500 text-right"
-                            />
-                          </div>
-                          <button
-                            onClick={() => {
-                              const newHiddenCategories = new Set(addForm.hiddenCategories || []);
-                              newHiddenCategories.add(category);
-                              setAddForm({...addForm, hiddenCategories: newHiddenCategories});
-                            }}
-                            className="flex items-center justify-center w-8 h-8 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
-                            title="Remove category"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  )}
-                </div>
-
-                {/* Total Section */}
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-gray-900">Total Amount:</span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      {formatCurrency(Object.values(addForm.categoryAmounts || {}).reduce((sum, amount) => sum + amount, 0))}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleAddEntry}
-                    disabled={addLoading}
-                    className="flex items-center space-x-2 bg-accounting-600 text-white px-4 py-2 rounded-md hover:bg-accounting-700 transition-colors disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>{addLoading ? 'Adding...' : 'Add Expense'}</span>
-                  </button>
-                  <button
-                    onClick={cancelAdding}
-                    className="flex items-center space-x-2 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                    <span>Cancel</span>
-                  </button>
-                </div>
-                
-                {/* Compact Error Display */}
-                {error && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <div className="flex items-start space-x-2">
-                      <div className="flex-shrink-0">
-                        <span className="text-red-500 text-sm">⚠️</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-red-700">{error}</p>
-                      </div>
-                      <button
-                        onClick={() => setError(null)}
-                        className="flex-shrink-0 text-red-400 hover:text-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
             
             <div className="overflow-x-auto border border-gray-200 rounded-lg">
             <table className="min-w-full divide-y divide-gray-200">
@@ -1535,6 +1354,37 @@ const AccountingPage: React.FC = () => {
               Add Your First Expense
             </button>
           </div>
+        )}
+
+        {/* AI Assistant Modal */}
+        {showAIAssistant && (
+          <AIAssistant
+            onConfirmEntries={handleAIAssistantEntries}
+            onClose={() => setShowAIAssistant(false)}
+            currentUser={(() => {
+              const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
+              return currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
+            })()}
+            currentCreditCard={(() => {
+              const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
+              const defaultUserName = currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
+              const userCreditCards = getCreditCardsForUser(defaultUserName);
+              return userCreditCards.length > 0 ? userCreditCards[0].name : '';
+            })()}
+            users={users}
+            creditCards={creditCards}
+          />
+        )}
+
+        {/* Add Expense Modal */}
+        {showAddExpenseModal && (
+          <AddExpenseModal
+            onConfirmEntries={handleManualAddEntries}
+            onClose={() => setShowAddExpenseModal(false)}
+            users={users}
+            creditCards={creditCards}
+            spendingCategories={spendingCategories}
+          />
         )}
       </main>
     </div>

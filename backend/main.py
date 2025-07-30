@@ -22,6 +22,7 @@ from features.ledger import router as ledger_router
 from features.users import router as users_router
 from features.credit_cards import router as credit_cards_router
 from features.spending_categories import router as spending_categories_router
+from features.ai_assistant import router as ai_assistant_router
 
 app = FastAPI(title="Bravo Cui's Life Tracking", version="1.0.0")
 
@@ -129,6 +130,7 @@ app.include_router(ledger_router)
 app.include_router(users_router)
 app.include_router(credit_cards_router)
 app.include_router(spending_categories_router)
+app.include_router(ai_assistant_router)
 
 # Auth endpoints
 @app.post("/auth/google")
