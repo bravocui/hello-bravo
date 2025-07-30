@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
+import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { LedgerEntry, SelectedView, SortBy, SortOrder } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { getCategoryColor } from '../utils/categoryUtils';

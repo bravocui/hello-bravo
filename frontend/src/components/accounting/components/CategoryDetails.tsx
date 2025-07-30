@@ -22,7 +22,7 @@ const CategoryDetails: React.FC<CategoryDetailsProps> = ({ filteredData }) => {
   // Helper function to get all months in the selected time range
   const getAllMonthsInRange = () => {
     const months: Array<{year: number, month: number}> = [];
-    const currentYear = new Date().getFullYear();
+  
     
     // For simplicity, we'll use all months from the data
     const allYears = new Set(filteredData.map(entry => entry.year));

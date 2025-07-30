@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Activity, MapPin, Cloud, DollarSign, User } from 'lucide-react';
+import { Activity, MapPin, Cloud, User } from 'lucide-react';
 import { getVersionString } from '../config/version';
 
 declare global {

@@ -15,7 +15,7 @@ interface TravelEntry {
 }
 
 const TravelPage: React.FC = () => {
-  const navigate = useNavigate();
+
   const [travelData, setTravelData] = useState<TravelEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

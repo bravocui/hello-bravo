@@ -47,13 +47,11 @@ const AccountingPage: React.FC = () => {
 
   const {
     editingEntry,
-    setEditingEntry,
     editForm,
     setEditForm,
     editLoading,
     addLoading,
     deleteLoading,
-    setDeleteLoading,
     showAIAssistant,
     setShowAIAssistant,
     showAddExpenseModal,

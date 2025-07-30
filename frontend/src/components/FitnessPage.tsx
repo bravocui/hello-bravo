@@ -14,7 +14,7 @@ interface FitnessEntry {
 }
 
 const FitnessPage: React.FC = () => {
-  const navigate = useNavigate();
+
   const [fitnessData, setFitnessData] = useState<FitnessEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

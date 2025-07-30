@@ -284,7 +284,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                     <div className="relative group">
                       <img
                         src={URL.createObjectURL(image)}
-                        alt="Uploaded image"
+                        alt="Uploaded"
                         className="w-full max-w-md h-48 object-cover rounded-lg border border-gray-200"
                       />
                       <button

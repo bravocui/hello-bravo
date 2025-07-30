@@ -14,7 +14,7 @@ interface WeatherData {
 }
 
 const WeatherPage: React.FC = () => {
-  const navigate = useNavigate();
+
   const [weatherData, setWeatherData] = useState<WeatherData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
