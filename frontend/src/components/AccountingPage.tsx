@@ -714,7 +714,7 @@ const AccountingPage: React.FC = () => {
           
           <div className="flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-3/5">
-              <table className="w-full text-sm text-left text-gray-600">
+              <table className="w-full text-sm text-left text-gray-600" style={{ tableLayout: 'auto' }}>
                 <thead className="text-xs text-gray-500 uppercase border-b">
                   <tr>
                     <th scope="col" className="py-3 pr-3 cursor-pointer" onClick={() => {
@@ -779,7 +779,7 @@ const AccountingPage: React.FC = () => {
                     
                     return sortedCategories.map(({ category, amount, percentage }) => (
                       <tr key={category} className="border-b">
-                        <td className="py-3 pr-3 font-medium text-gray-800 whitespace-nowrap">
+                        <td className="py-3 pr-3 font-medium text-gray-800">
                           <div className="flex items-center">
                             <span className="h-2.5 w-2.5 rounded-full mr-3" style={{ backgroundColor: getCategoryColor(category) }}></span>
                             {category}
@@ -1235,7 +1235,7 @@ const AccountingPage: React.FC = () => {
 
             
             <div className="overflow-x-auto border border-gray-200 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200" style={{ tableLayout: 'auto' }}>
               <thead className="bg-gray-50">
                 <tr>
                   <th 
@@ -1312,24 +1312,24 @@ const AccountingPage: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedTableData.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {editingEntry === entry.id ? (
                         <input
                           type="number"
                           value={editForm.year || ''}
                           onChange={(e) => setEditForm({...editForm, year: parseInt(e.target.value)})}
-                          className="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                         />
                       ) : (
-                        <span className="block w-16">{entry.year}</span>
+                        <span>{entry.year}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {editingEntry === entry.id ? (
                         <select
                           value={editForm.month || ''}
                           onChange={(e) => setEditForm({...editForm, month: parseInt(e.target.value)})}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                          className="w-32 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                         >
                           {[
                             { value: 1, label: 'January' },
@@ -1351,15 +1351,15 @@ const AccountingPage: React.FC = () => {
                           ))}
                         </select>
                       ) : (
-                        <span className="block w-24">{new Date(entry.year, entry.month - 1).toLocaleDateString('en-US', { month: 'long' })}</span>
+                        <span>{new Date(entry.year, entry.month - 1).toLocaleDateString('en-US', { month: 'long' })}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {editingEntry === entry.id ? (
                         <select
                           value={editForm.user_name || ''}
                           onChange={(e) => setEditForm({...editForm, user_name: e.target.value, credit_card: ''})}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                         >
                           <option value="">Select User</option>
                           {Array.isArray(users) && users.map(user => (
@@ -1367,15 +1367,15 @@ const AccountingPage: React.FC = () => {
                           ))}
                         </select>
                       ) : (
-                        <span className="block w-20 truncate">{entry.user_name}</span>
+                        <span className="break-words">{entry.user_name}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {editingEntry === entry.id ? (
                         <select
                           value={editForm.credit_card || ''}
                           onChange={(e) => setEditForm({...editForm, credit_card: e.target.value})}
-                          className="w-28 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                          className="w-32 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                         >
                           <option value="">Select Credit Card</option>
                           {editForm.user_name ? (
@@ -1391,15 +1391,15 @@ const AccountingPage: React.FC = () => {
                           )}
                         </select>
                       ) : (
-                        <span className="block w-28 truncate">{entry.credit_card}</span>
+                        <span className="break-words">{entry.credit_card}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-0">
+                    <td className="px-6 py-4 text-sm text-gray-900">
                       {editingEntry === entry.id ? (
                         <select
                           value={editForm.category || ''}
                           onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                          className="w-28 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                         >
                           <option value="">Select Category</option>
                           {getCategoryNames().map(category => (
@@ -1407,26 +1407,26 @@ const AccountingPage: React.FC = () => {
                           ))}
                         </select>
                       ) : (
-                        <div className="flex items-center space-x-2 w-24">
+                        <div className="flex items-center space-x-2">
                           <span>{getCategoryIcon(entry.category)}</span>
-                          <span className="truncate">{entry.category}</span>
+                          <span className="break-words">{entry.category}</span>
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600 min-w-0">
+                    <td className="px-6 py-4 text-sm font-medium text-red-600">
                       {editingEntry === entry.id ? (
                         <input
                           type="number"
                           step="0.01"
                           value={editForm.amount || ''}
                           onChange={(e) => setEditForm({...editForm, amount: parseFloat(e.target.value)})}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                         />
                       ) : (
-                        <span className="block w-20">{formatCurrency(entry.amount)}</span>
+                        <span>{formatCurrency(entry.amount)}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 text-sm font-medium">
                       {editingEntry === entry.id ? (
                         <div className="flex items-center space-x-2">
                           <button
