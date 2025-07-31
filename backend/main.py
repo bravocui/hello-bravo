@@ -98,6 +98,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    print(f"❌ Unhandled exception: {type(exc).__name__}: {str(exc)}")
+    import traceback
+    traceback.print_exc()
     return JSONResponse(
         status_code=500,
         content={"detail": f"Internal server error: {str(exc)}", "error_type": "internal_error"}
@@ -128,11 +131,11 @@ app.include_router(ai_assistant_router)
 
 # Auth endpoints
 @app.post("/auth/google")
-async def auth_google(token: dict, response: Response, db = Depends(get_db)):
+async def auth_google(token: dict, response: Response, db = Depends(get_db), stay_logged_in: bool = False):
     if database_available:
-        return await google_auth(token, response, db)
+        return await google_auth(token, response, db, stay_logged_in)
     else:
-        return await google_auth_simple(token, response)
+        return await google_auth_simple(token, response, stay_logged_in)
 
 @app.post("/logout")
 async def auth_logout(response: Response):

@@ -4,15 +4,17 @@ Simplified auth module for testing without database
 from fastapi import HTTPException, Response
 from datetime import datetime, timedelta
 from jose import jwt
-from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, JWT_COOKIE_NAME, ENVIRONMENT
+from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, JWT_DEFAULT_EXPIRE_MINUTES, JWT_STAY_LOGGED_IN_EXPIRE_MINUTES, JWT_COOKIE_NAME, ENVIRONMENT
 
-def create_jwt(user: dict):
+def create_jwt(user: dict, expiration_minutes: int = None):
     """Create JWT token for user"""
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    # Use provided expiration or default to shorter session
+    expire_minutes = expiration_minutes or JWT_DEFAULT_EXPIRE_MINUTES
+    expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
     to_encode = {"sub": user["email"], "exp": expire, "user": user}
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def google_auth_simple(token: dict, response: Response):
+async def google_auth_simple(token: dict, response: Response, stay_logged_in: bool = False):
     """Handle Google OAuth authentication without database"""
     try:
         token_value = token.get("token", "")
@@ -40,7 +42,9 @@ async def google_auth_simple(token: dict, response: Response):
             "id": 1  # Fake ID
         }
         
-        jwt_token = create_jwt(jwt_user_data)
+        # Determine expiration based on stay_logged_in preference
+        expiration_minutes = JWT_STAY_LOGGED_IN_EXPIRE_MINUTES if stay_logged_in else JWT_DEFAULT_EXPIRE_MINUTES
+        jwt_token = create_jwt(jwt_user_data, expiration_minutes)
         
         # Configure cookie settings based on environment
         cookie_kwargs = {
@@ -48,7 +52,7 @@ async def google_auth_simple(token: dict, response: Response):
             "value": jwt_token,
             "httponly": True,
             "secure": True,
-            "max_age": JWT_EXPIRE_MINUTES * 60,
+            "max_age": expiration_minutes * 60,
             "path": "/"  # Ensure cookie is sent to all paths
         }
         # Set SameSite based on environment

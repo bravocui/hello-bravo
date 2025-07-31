@@ -15,7 +15,7 @@ from database import get_db
 from services.user_service import UserService
 
 # Import centralized configuration
-from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, GOOGLE_CLIENT_ID, ENVIRONMENT
+from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_MINUTES, JWT_DEFAULT_EXPIRE_MINUTES, JWT_STAY_LOGGED_IN_EXPIRE_MINUTES, GOOGLE_CLIENT_ID, ENVIRONMENT
 
 # JWT Configuration
 JWT_COOKIE_NAME = "session_token"
@@ -66,10 +66,14 @@ async def verify_google_token(id_token: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Token verification error: {str(e)}")
 
-def create_jwt(user: dict):
+def create_jwt(user: dict, expiration_minutes: int = None):
     """Create JWT token for user"""
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    print(f"🔍 Creating JWT for user: {user}")
+    # Use provided expiration or default to shorter session
+    expire_minutes = expiration_minutes or JWT_DEFAULT_EXPIRE_MINUTES
+    expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
     to_encode = {"sub": user["email"], "exp": expire, "user": user}
+    print(f"🔍 JWT payload: {to_encode}")
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 async def get_current_user(
@@ -107,7 +111,7 @@ async def get_current_user(
         
         # Check if this is a guest user
         is_guest = (user_data.get('email', '').startswith('guest-') or 
-                   user_data.get('role') == UserRole.GUEST or
+                   user_data.get('role') == UserRole.GUEST.value or
                    user_data.get('id') == 0)
         
         if is_guest:
@@ -118,7 +122,7 @@ async def get_current_user(
                 email=user_data.get('email', ''),
                 name=user_data.get('name', 'Guest User'),
                 picture=user_data.get('picture'),
-                role=user_data.get('role', UserRole.GUEST)
+                role=str(user_data.get('role', UserRole.GUEST.value))
             )
         
         # For regular users, get fresh user data from database
@@ -149,7 +153,7 @@ async def get_current_user(
             email=db_user.email,
             name=db_user.name,
             picture=db_user.picture_url,
-            role=db_user.role.value
+            role=str(db_user.role.value)
         )
     except JWTError as jwt_error:
         print(f"❌ JWT decode error: {jwt_error}")
@@ -158,7 +162,7 @@ async def get_current_user(
         print(f"❌ Authentication error: {e}")
         raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
 
-async def google_auth(token: dict, response: Response, db: Session = Depends(get_db)):
+async def google_auth(token: dict, response: Response, db: Session = Depends(get_db), stay_logged_in: bool = False):
     """Handle Google OAuth authentication"""
     try:
         token_value = token.get("token", "")
@@ -169,7 +173,7 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
                 "email": f"guest-{datetime.now().timestamp()}@example.com",
                 "name": "Guest User",
                 "picture": None,
-                "role": UserRole.GUEST
+                "role": UserRole.GUEST.value
             }
         else:
             user_data = await verify_google_token(token_value)
@@ -214,10 +218,14 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             "name": user_data["name"],
             "picture": user_data.get("picture"),
             "id": user_data.get("id", 0),
-            "role": user_data["role"]
+            "role": str(user_data["role"])
         }
         
-        jwt_token = create_jwt(jwt_user_data)
+        print(f"🔍 JWT user data: {jwt_user_data}")
+        
+        # Determine expiration based on stay_logged_in preference
+        expiration_minutes = JWT_STAY_LOGGED_IN_EXPIRE_MINUTES if stay_logged_in else JWT_DEFAULT_EXPIRE_MINUTES
+        jwt_token = create_jwt(jwt_user_data, expiration_minutes)
         
         # Configure cookie settings based on environment
         cookie_kwargs = {
@@ -225,7 +233,7 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             "value": jwt_token,
             "httponly": True,
             "secure": True,
-            "max_age": JWT_EXPIRE_MINUTES * 60,
+            "max_age": expiration_minutes * 60,
             "path": "/"  # Ensure cookie is sent to all paths
         }
         

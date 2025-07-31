@@ -11,7 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (token: string) => Promise<void>;
+  login: (token: string, stayLoggedIn?: boolean) => Promise<void>;
   logout: () => void;
   loading: boolean;
   databaseAvailable: boolean;
@@ -165,9 +165,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const login = async (token: string) => {
+  const login = async (token: string, stayLoggedIn: boolean = false) => {
     try {
-      const response = await api.post('/auth/google', { token });
+      const response = await api.post('/auth/google', { token, stay_logged_in: stayLoggedIn });
       const { user: userData, token: authToken } = response.data;
       
       // Save to state and localStorage

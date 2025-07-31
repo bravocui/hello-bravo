@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Activity, MapPin, Cloud, User } from 'lucide-react';
@@ -13,6 +13,7 @@ declare global {
 const Login: React.FC = () => {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -23,7 +24,7 @@ const Login: React.FC = () => {
   const handleGoogleLogin = useCallback(async (response: any) => {
     try {
       console.log('Google login response received:', response);
-      await login(response.credential);
+      await login(response.credential, stayLoggedIn);
       navigate('/');
     } catch (error) {
       console.error('Login failed:', error);
@@ -35,19 +36,19 @@ const Login: React.FC = () => {
         alert(`Login failed: ${errorMessage}`);
       }
     }
-  }, [login, navigate]);
+  }, [login, navigate, stayLoggedIn]);
 
   const handleGuestLogin = useCallback(async () => {
     try {
       // Create a guest token
       const guestToken = 'guest-token-' + Date.now();
-      await login(guestToken);
+      await login(guestToken, stayLoggedIn);
       navigate('/');
     } catch (error) {
       console.error('Guest login failed:', error);
       alert('Guest login failed. Please try again.');
     }
-  }, [login, navigate]);
+  }, [login, navigate, stayLoggedIn]);
 
   useEffect(() => {
     if (window.google) {
@@ -139,6 +140,20 @@ const Login: React.FC = () => {
               <User className="w-4 h-4" />
               <span>Login as Guest</span>
             </button>
+          </div>
+
+          {/* Stay Logged In Checkbox */}
+          <div className="mt-4 flex items-center">
+            <input
+              id="stay-logged-in"
+              type="checkbox"
+              checked={stayLoggedIn}
+              onChange={(e) => setStayLoggedIn(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="stay-logged-in" className="ml-2 text-sm text-gray-700">
+              Stay logged in for 1 week
+            </label>
           </div>
 
           <div className="mt-6 text-center">

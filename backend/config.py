@@ -35,7 +35,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5
 # JWT configuration
 JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "10080"))  # 7 days (legacy)
+JWT_DEFAULT_EXPIRE_MINUTES = int(os.getenv("JWT_DEFAULT_EXPIRE_MINUTES", "60"))  # 1 hours
+JWT_STAY_LOGGED_IN_EXPIRE_MINUTES = int(os.getenv("JWT_STAY_LOGGED_IN_EXPIRE_MINUTES", "10080"))  # 7 days
 JWT_COOKIE_NAME = "session_token"
 
 # Google OAuth configuration
