@@ -2,22 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Calendar, Star, Image } from 'lucide-react';
 import api from '../config/api';
 import Header from './Header';
-
-interface TravelEntry {
-  id: number;
-  destination: string;
-  start_date: string;
-  end_date: string;
-  description: string;
-  photos: string[];
-  rating?: number;
-}
+import { 
+  TravelMap,
+  TravelEntry, 
+  sampleTravelData, 
+  formatDate, 
+  formatDateRange, 
+  calculateTripStats 
+} from './travel';
 
 const TravelPage: React.FC = () => {
-
   const [travelData, setTravelData] = useState<TravelEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<TravelEntry | null>(null);
+  const [showEntries, setShowEntries] = useState(false);
 
   useEffect(() => {
     fetchTravelData();
@@ -26,28 +25,17 @@ const TravelPage: React.FC = () => {
   const fetchTravelData = async () => {
     try {
       const response = await api.get('/travel/entries');
-      setTravelData(response.data);
+      // Merge with sample data for demo purposes
+      const serverData = response.data || [];
+      const mergedData = [...serverData, ...sampleTravelData];
+      setTravelData(mergedData);
     } catch (error) {
       console.error('Failed to fetch travel data:', error);
-      setError(`Error loading data from server: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Use sample data as fallback
+      setTravelData(sampleTravelData);
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const formatDateRange = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    return `${formatDate(startDate)} - ${formatDate(endDate)} (${days} days)`;
   };
 
   const renderStars = (rating: number) => {
@@ -57,6 +45,16 @@ const TravelPage: React.FC = () => {
         className={`w-4 h-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
       />
     ));
+  };
+
+  const handleMarkerClick = (trip: TravelEntry) => {
+    setSelectedTrip(trip);
+    setShowEntries(true);
+    // Scroll to the trip entry
+    const element = document.getElementById(`trip-${trip.id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   if (loading) {
@@ -94,6 +92,8 @@ const TravelPage: React.FC = () => {
     );
   }
 
+  const { totalTrips, totalDays, avgRating } = calculateTripStats(travelData);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
@@ -105,73 +105,42 @@ const TravelPage: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-travel-100 rounded-lg flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-travel-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Trips</p>
-                <p className="text-2xl font-bold text-gray-900">{travelData.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-travel-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-travel-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Days</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {travelData.reduce((total, trip) => {
-                    const start = new Date(trip.start_date);
-                    const end = new Date(trip.end_date);
-                    return total + Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                  }, 0)}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-travel-100 rounded-lg flex items-center justify-center">
-                <Star className="w-5 h-5 text-travel-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Rating</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {(travelData.reduce((sum, trip) => sum + (trip.rating || 0), 0) / travelData.length).toFixed(1)}
-                </p>
-              </div>
-            </div>
-          </div>
+
+
+        {/* Travel Map */}
+        <div className="mb-8">
+          <TravelMap 
+            travelData={travelData} 
+            onMarkerClick={handleMarkerClick}
+          />
         </div>
 
         {/* Travel Entries */}
-        <div className="space-y-6">
-          {travelData.map((trip) => (
-            <div key={trip.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {showEntries && selectedTrip && (
+          <div className="space-y-6">
+            <div 
+              key={selectedTrip.id} 
+              id={`trip-${selectedTrip.id}`}
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-all duration-200 ${
+                selectedTrip?.id === selectedTrip.id ? 'ring-2 ring-travel-500 ring-opacity-50' : ''
+              }`}
+            >
               {/* Trip Header */}
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-xl font-semibold text-gray-900">{trip.destination}</h3>
-                      {trip.rating && (
+                      <h3 className="text-xl font-semibold text-gray-900">{selectedTrip.destination}</h3>
+                      {selectedTrip.rating && (
                         <div className="flex items-center space-x-1">
-                          {renderStars(trip.rating)}
+                          {renderStars(selectedTrip.rating)}
                         </div>
                       )}
                     </div>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <Calendar className="w-4 h-4" />
-                        <span>{formatDateRange(trip.start_date, trip.end_date)}</span>
+                        <span>{formatDateRange(selectedTrip.start_date, selectedTrip.end_date)}</span>
                       </div>
                     </div>
                   </div>
@@ -184,22 +153,22 @@ const TravelPage: React.FC = () => {
 
               {/* Trip Description */}
               <div className="px-6 py-4">
-                <p className="text-gray-700 leading-relaxed">{trip.description}</p>
+                <p className="text-gray-700 leading-relaxed">{selectedTrip.description}</p>
               </div>
 
               {/* Photo Gallery */}
-              {trip.photos.length > 0 && (
+              {selectedTrip.photos.length > 0 && (
                 <div className="px-6 pb-4">
                   <div className="flex items-center space-x-2 mb-3">
                     <Image className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Photos ({trip.photos.length})</span>
+                    <span className="text-sm font-medium text-gray-700">Photos ({selectedTrip.photos.length})</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {trip.photos.map((photo, index) => (
+                    {selectedTrip.photos.map((photo: string, index: number) => (
                       <div key={index} className="aspect-video rounded-lg overflow-hidden">
                         <img
                           src={photo}
-                          alt={`${trip.destination} ${index + 1}`}
+                          alt={`${selectedTrip.destination} ${index + 1}`}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
                         />
                       </div>
@@ -208,8 +177,8 @@ const TravelPage: React.FC = () => {
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
         {/* Empty State */}
         {travelData.length === 0 && (
