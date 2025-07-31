@@ -50,8 +50,7 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ filteredData }) =
   }));
 
   const average = chartData.reduce((sum, item) => sum + item.spending, 0) / chartData.length;
-  const CURRENT_MOCK_MONTH = new Date().getMonth() + 1;
-  const CURRENT_MOCK_YEAR = new Date().getFullYear();
+
 
   const CustomXAxisTick = (props: any) => {
     const { x, y, payload } = props;
@@ -126,7 +125,7 @@ const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ filteredData }) =
               {chartData.map((entry, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={entry.month === CURRENT_MOCK_MONTH && entry.year === CURRENT_MOCK_YEAR ? '#1e40af' : '#3b82f6'} 
+                  fill="#3b82f6" 
                 />
               ))}
             </Bar>

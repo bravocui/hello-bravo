@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Save, Plus } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AddExpenseForm {
   year?: number;
@@ -11,7 +12,7 @@ interface AddExpenseForm {
 }
 
 interface AddExpenseModalProps {
-  onConfirmEntries: (entries: any[]) => void;
+  onConfirmEntries: (entries: any[]) => Promise<number>;
   onClose: () => void;
   users: Array<{id: number, name: string, email: string}>;
   creditCards: Array<{id: number, name: string, owner: string}>;
@@ -25,10 +26,10 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   creditCards, 
   spendingCategories 
 }) => {
+  const { user } = useAuth();
   const [addForm, setAddForm] = useState<AddExpenseForm>(() => {
     const now = new Date();
-    const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
-    const defaultUserName = currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
+    const defaultUserName = user?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
     
     return {
       year: now.getFullYear(),
@@ -39,8 +40,21 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       hiddenCategories: new Set()
     };
   });
+
+  // Update user_name when user changes
+  useEffect(() => {
+    if (user?.name && (!addForm.user_name || addForm.user_name !== user.name)) {
+      setAddForm(prev => ({
+        ...prev,
+        user_name: user.name,
+        credit_card: '' // Reset credit card when user changes
+      }));
+    }
+  }, [user?.name, addForm.user_name]);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdEntriesCount, setCreatedEntriesCount] = useState(0);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -67,8 +81,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     return spendingCategories.map(category => category.category_name);
   };
 
-  const handleConfirmEntries = () => {
+  const handleConfirmEntries = async () => {
     try {
+      setIsSubmitting(true);
+      setError(null);
+      
       // Validate required fields
       if (!addForm.year || !addForm.month || !addForm.user_name || !addForm.credit_card || !addForm.categoryAmounts) {
         setError('Please fill in all required fields');
@@ -78,13 +95,13 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       // Get total amount and check if any categories have amounts
       const totalAmount = Object.values(addForm.categoryAmounts).reduce((sum, amount) => sum + amount, 0);
       if (totalAmount === 0) {
-        setError('Please enter amounts for at least one category');
+        setError('Please enter amounts for at least one category (positive or negative values are allowed)');
         return;
       }
       
-      // Create entries for each category with an amount
+      // Create entries for each category with an amount (including negative values)
       const entries = Object.entries(addForm.categoryAmounts)
-        .filter(([category, amount]) => amount > 0)
+        .filter(([category, amount]) => amount !== 0)
         .map(([category, amount]) => ({
           year: addForm.year,
           month: addForm.month,
@@ -95,10 +112,14 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           notes: ''
         }));
       
-      onConfirmEntries(entries);
+      // Call the async function and wait for it to complete
+      const createdCount = await onConfirmEntries(entries);
+      setCreatedEntriesCount(createdCount);
       setShowSuccessPopup(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add entries');
+      setError(err.message || 'Failed to add entries');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -113,7 +134,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Add New Expense</h2>
-              <p className="text-sm text-gray-600">Manually add expense entries to your ledger</p>
+              <p className="text-sm text-gray-600">Manually add expense entries to your ledger (positive or negative amounts)</p>
             </div>
           </div>
           <button
@@ -253,6 +274,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                             setAddForm({...addForm, categoryAmounts: newAmounts});
                           }}
                           className="w-24 px-2 py-1 text-sm border border-gray-300 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          title="Enter positive or negative amount"
                         />
                         <button
                           onClick={() => {
@@ -292,10 +314,20 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             </button>
             <button
               onClick={handleConfirmEntries}
-              className="flex items-center space-x-2 bg-accounting-600 text-white px-6 py-2 rounded-lg hover:bg-accounting-700 transition-colors"
+              disabled={isSubmitting}
+              className="flex items-center space-x-2 bg-accounting-600 text-white px-6 py-2 rounded-lg hover:bg-accounting-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Save className="w-4 h-4" />
-              <span>Add Expense</span>
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Adding...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Add Expense</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -313,7 +345,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                 Items Added Successfully
               </h3>
               <p className="text-gray-600 mb-6">
-                Your expense entries have been added to your ledger.
+                {createdEntriesCount} expense {createdEntriesCount === 1 ? 'entry' : 'entries'} {createdEntriesCount === 1 ? 'has' : 'have'} been added to your ledger.
               </p>
               <button
                 onClick={() => {

@@ -27,9 +27,10 @@ export interface SpendingCategory {
 }
 
 export type TimeRange = 'all-time' | 'year-to-date' | string;
-export type DataSource = 'database' | 'mock';
+export type DataSource = 'database';
 export type SelectedView = 'monthly-trend' | 'category-details' | 'credit-card-details' | 'detailed-data';
 export type SortBy = 'category' | 'amount' | 'percentage';
 export type SortOrder = 'asc' | 'desc';
 export type TableSortField = 'year' | 'month' | 'user_name' | 'credit_card' | 'category' | 'amount';
-export type FilterValue = 'all' | string | number; 
+export type FilterValue = 'all' | string | number;
+export type UserFilterValue = string[]; 

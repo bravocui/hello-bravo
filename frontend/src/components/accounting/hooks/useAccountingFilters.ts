@@ -1,12 +1,11 @@
-import { useState, useMemo } from 'react';
-import { LedgerEntry, TimeRange, DataSource, SelectedView, FilterValue } from '../types';
+import React, { useState, useMemo } from 'react';
+import { LedgerEntry, TimeRange, DataSource, SelectedView, FilterValue, UserFilterValue } from '../types';
 
 export const useAccountingFilters = (ledgerData: LedgerEntry[]) => {
-  const [selectedUser, setSelectedUser] = useState<FilterValue>('all');
+  const [selectedUsers, setSelectedUsers] = useState<UserFilterValue>([]);
   const [selectedCreditCard, setSelectedCreditCard] = useState<FilterValue>('all');
   const [selectedYear, setSelectedYear] = useState<FilterValue>('all');
   const [selectedMonth, setSelectedMonth] = useState<FilterValue>('all');
-  const [dataSource, setDataSource] = useState<DataSource>('database');
   const [selectedView, setSelectedView] = useState<SelectedView>('detailed-data');
 
   // Get unique users for the selector
@@ -14,6 +13,13 @@ export const useAccountingFilters = (ledgerData: LedgerEntry[]) => {
     const users = new Set(ledgerData.map(entry => entry.user_name));
     return Array.from(users).sort();
   }, [ledgerData]);
+
+  // Initialize selectedUsers with all users when uniqueUsers changes
+  React.useEffect(() => {
+    if (uniqueUsers.length > 0 && selectedUsers.length === 0) {
+      setSelectedUsers(uniqueUsers);
+    }
+  }, [uniqueUsers, selectedUsers]);
 
   // Get unique credit cards for the selector
   const uniqueCreditCards = useMemo(() => {
@@ -34,16 +40,14 @@ export const useAccountingFilters = (ledgerData: LedgerEntry[]) => {
   }, [ledgerData]);
 
   return {
-    selectedUser,
-    setSelectedUser,
+    selectedUsers,
+    setSelectedUsers,
     selectedCreditCard,
     setSelectedCreditCard,
     selectedYear,
     setSelectedYear,
     selectedMonth,
     setSelectedMonth,
-    dataSource,
-    setDataSource,
     selectedView,
     setSelectedView,
     uniqueUsers,

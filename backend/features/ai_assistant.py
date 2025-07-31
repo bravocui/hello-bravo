@@ -93,8 +93,8 @@ async def process_expense_with_ai(
         Guidelines:
         - If no year/month is mentioned, omit those fields
         - Categories MUST be exact matches from the provided list, or "Others"
-        - Amounts should be positive numbers
-        - Only include actual expenses, not credits or refunds
+        - Amounts can be positive or negative numbers (negative for credits/refunds)
+        - Include both expenses (positive) and credits/refunds (negative)
         - In the notes field, explain how you calculated the amount from the input
         - If you're unsure about any field, omit it rather than guess
         - Sum up multiple small expenses into single entries when appropriate

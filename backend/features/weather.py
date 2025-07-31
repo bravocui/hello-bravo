@@ -1,13 +1,14 @@
 from fastapi import APIRouter
 from models import WeatherData
-from mock_data import MOCK_WEATHER_DATA
+
 
 router = APIRouter(prefix="/weather", tags=["weather"])
 
 @router.get("/switzerland")
 async def get_switzerland_weather():
     """Get weather forecast for major Swiss cities"""
-    return MOCK_WEATHER_DATA
+    # TODO: Implement real weather API
+    return []
 
 @router.get("/{city}")
 async def get_city_weather(city: str):

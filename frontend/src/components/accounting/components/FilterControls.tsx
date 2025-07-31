@@ -1,18 +1,16 @@
 import React from 'react';
 import { User, Calendar, BarChart3, CreditCard, CalendarDays } from 'lucide-react';
-import { LedgerEntry, DataSource, FilterValue } from '../types';
+import { LedgerEntry, DataSource, FilterValue, UserFilterValue } from '../types';
 
 interface FilterControlsProps {
-  selectedUser: FilterValue;
-  setSelectedUser: (user: FilterValue) => void;
+  selectedUsers: UserFilterValue;
+  setSelectedUsers: (users: UserFilterValue) => void;
   selectedCreditCard: FilterValue;
   setSelectedCreditCard: (card: FilterValue) => void;
   selectedYear: FilterValue;
   setSelectedYear: (year: FilterValue) => void;
   selectedMonth: FilterValue;
   setSelectedMonth: (month: FilterValue) => void;
-  dataSource: DataSource;
-  setDataSource: (source: DataSource) => void;
   uniqueUsers: string[];
   uniqueCreditCards: string[];
   uniqueYears: number[];
@@ -22,16 +20,14 @@ interface FilterControlsProps {
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
-  selectedUser,
-  setSelectedUser,
+  selectedUsers,
+  setSelectedUsers,
   selectedCreditCard,
   setSelectedCreditCard,
   selectedYear,
   setSelectedYear,
   selectedMonth,
   setSelectedMonth,
-  dataSource,
-  setDataSource,
   uniqueUsers,
   uniqueCreditCards,
   uniqueYears,
@@ -44,65 +40,78 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Filter credit cards based on selected user
-  const availableCreditCards = React.useMemo(() => {
-    if (selectedUser === 'all') {
-      // If "All Users" is selected, show all credit cards
-      return uniqueCreditCards;
-    } else {
-      // If a specific user is selected, only show their credit cards
-      return creditCards
-        .filter(card => card.owner === selectedUser)
-        .map(card => card.name)
-        .sort();
-    }
-  }, [selectedUser, uniqueCreditCards, creditCards]);
+  // Helper function to check if a user is selected
+  const isUserSelected = (userName: string) => {
+    return selectedUsers.includes(userName);
+  };
 
-  // Reset credit card selection when user changes and current selection is not available
+  // Helper function to toggle user selection
+  const toggleUser = (userName: string) => {
+    if (selectedUsers.includes(userName)) {
+      // Remove user from selection
+      const newSelection = selectedUsers.filter(u => u !== userName);
+      if (newSelection.length === 0) {
+        // If no users selected, select all users
+        setSelectedUsers(uniqueUsers);
+      } else {
+        setSelectedUsers(newSelection);
+      }
+    } else {
+      // Add user to selection
+      setSelectedUsers([...selectedUsers, userName]);
+    }
+  };
+
+
+
+  // Filter credit cards based on selected users
+  const availableCreditCards = React.useMemo(() => {
+    // Show credit cards for selected users
+    return creditCards
+      .filter(card => selectedUsers.includes(card.owner))
+      .map(card => card.name)
+      .sort();
+  }, [selectedUsers, creditCards]);
+
+  // Reset credit card selection when users change and current selection is not available
   React.useEffect(() => {
-    if (selectedUser !== 'all' && selectedCreditCard !== 'all') {
+    if (selectedUsers.length > 0 && selectedCreditCard !== 'all') {
       const userCards = creditCards
-        .filter(card => card.owner === selectedUser)
+        .filter(card => selectedUsers.includes(card.owner))
         .map(card => card.name);
       
       if (!userCards.includes(selectedCreditCard as string)) {
         setSelectedCreditCard('all');
       }
     }
-  }, [selectedUser, selectedCreditCard, creditCards, setSelectedCreditCard]);
+  }, [selectedUsers, selectedCreditCard, creditCards, setSelectedCreditCard]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
       <div className="flex flex-wrap gap-4 items-center">
               {/* User Filter */}
-        <div className="min-w-[200px]">
-          <div className="flex items-center justify-between mb-1">
+        <div className="min-w-[400px]">
+          <div className="flex items-center mb-2">
             <div className="flex items-center space-x-1">
               <User className="w-3 h-3 text-accounting-600" />
-              <p className="text-xs font-medium text-gray-600">User</p>
+              <p className="text-xs font-medium text-gray-600">Users</p>
             </div>
-            <p className="text-xs font-medium text-gray-900">
-              {selectedUser === 'all' 
-                ? `${new Set(filteredData.map(entry => entry.user_name)).size} users`
-                : '1 user'}
-            </p>
           </div>
-          <select
-            value={selectedUser}
-            onChange={(e) => {
-              setSelectedUser(e.target.value);
-              // Reset credit card selection when user changes
-              if (e.target.value !== selectedUser) {
-                setSelectedCreditCard('all');
-              }
-            }}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-accounting-500 focus:border-transparent bg-white"
-          >
-            <option value="all">All Users</option>
+          <div className="flex flex-wrap gap-2">
             {uniqueUsers.map(user => (
-              <option key={user} value={user}>{user}</option>
+              <button
+                key={user}
+                onClick={() => toggleUser(user)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  isUserSelected(user)
+                    ? 'bg-accounting-600 text-white border-accounting-600'
+                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {user}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
       
               {/* Credit Card Filter */}
@@ -125,13 +134,13 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             disabled={availableCreditCards.length === 0}
           >
                           <option value="all">
-                {selectedUser === 'all' ? 'All cards' : 'All cards'}
+                All cards
               </option>
             {availableCreditCards.map(card => (
               <option key={card} value={card}>{card}</option>
             ))}
           </select>
-          {availableCreditCards.length === 0 && selectedUser !== 'all' && (
+          {availableCreditCards.length === 0 && selectedUsers.length > 0 && (
             <p className="text-xs text-gray-500 mt-1">No credit cards for this user</p>
           )}
         </div>
@@ -188,26 +197,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
       
 
       
-        {/* Data Source Filter */}
-        <div className="min-w-[150px]">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center space-x-1">
-              <BarChart3 className="w-3 h-3 text-accounting-600" />
-              <p className="text-xs font-medium text-gray-600">Data Source</p>
-            </div>
-            <p className="text-xs font-medium text-gray-900">
-              {dataSource === 'database' ? 'Database' : 'Mock Data'}
-            </p>
-          </div>
-          <select
-            value={dataSource}
-            onChange={(e) => setDataSource(e.target.value as DataSource)}
-            className="w-full border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-accounting-500 focus:border-transparent bg-white"
-          >
-            <option value="database">Database</option>
-            <option value="mock">Mock Data</option>
-          </select>
-        </div>
+
       </div>
     </div>
   );

@@ -5,8 +5,7 @@ import { LedgerEntry, DataSource } from '../types';
 export const useAccountingActions = (
   ledgerData: LedgerEntry[],
   setLedgerData: React.Dispatch<React.SetStateAction<LedgerEntry[]>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>,
-  dataSource: DataSource
+  setError: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
   const [editingEntry, setEditingEntry] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<LedgerEntry>>({});
@@ -17,9 +16,6 @@ export const useAccountingActions = (
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
 
   const startEditing = (entry: LedgerEntry) => {
-    if (dataSource === 'mock') {
-      return; // Disable editing for mock data
-    }
     setEditingEntry(entry.id);
     setEditForm({
       year: entry.year,
@@ -84,17 +80,10 @@ export const useAccountingActions = (
   };
 
   const startAdding = () => {
-    if (dataSource === 'mock') {
-      return; // Disable adding for mock data
-    }
     setShowAddExpenseModal(true);
   };
 
   const handleDeleteEntry = async (entryId: number) => {
-    if (dataSource === 'mock') {
-      return; // Disable deleting for mock data
-    }
-    
     if (!window.confirm('Are you sure you want to delete this expense entry?')) {
       return;
     }
@@ -115,36 +104,51 @@ export const useAccountingActions = (
   };
 
   const handleAIAssistantEntries = async (entries: any[], selectedUser?: string, selectedCreditCard?: string) => {
-    // Use selected user and credit card, or fall back to defaults
-    const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
-    const defaultUserName = selectedUser || currentUser?.name || '';
-    const userCreditCards = ledgerData.filter(entry => entry.user_name === defaultUserName);
-    const defaultCreditCard = selectedCreditCard || (userCreditCards.length > 0 ? userCreditCards[0].credit_card : '');
-    
-    // Get current date for default year/month
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    
-    // Convert AI entries to ledger entries
-    const ledgerEntries = entries.map(entry => ({
-      year: entry.year || currentYear,
-      month: entry.month || currentMonth,
-      user_name: defaultUserName,
-      credit_card: defaultCreditCard,
-      category: entry.category,
-      amount: entry.amount,
-      notes: entry.notes || ''
-    }));
-    
-    // Add entries using batch endpoint
-    const response = await api.post('/ledger/entries/batch', { entries: ledgerEntries });
-    
-    // Add the new entries to the beginning of the list
-    const newEntries = response.data;
-    setLedgerData(prevData => [...newEntries, ...prevData]);
-    
-    setError(null);
+    try {
+      // Use selected user and credit card, or fall back to defaults
+      const currentUser = localStorage.getItem('user_data') ? JSON.parse(localStorage.getItem('user_data')!) : null;
+      const defaultUserName = selectedUser || currentUser?.name || '';
+      const userCreditCards = ledgerData.filter(entry => entry.user_name === defaultUserName);
+      const defaultCreditCard = selectedCreditCard || (userCreditCards.length > 0 ? userCreditCards[0].credit_card : '');
+      
+      // Get current date for default year/month
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      
+      // Convert AI entries to ledger entries
+      const ledgerEntries = entries.map(entry => ({
+        year: entry.year || currentYear,
+        month: entry.month || currentMonth,
+        user_name: defaultUserName,
+        credit_card: defaultCreditCard,
+        category: entry.category,
+        amount: entry.amount,
+        notes: entry.notes || ''
+      }));
+      
+      // Add entries using batch endpoint
+      const response = await api.post('/ledger/entries/batch', { entries: ledgerEntries });
+      
+      // Add the new entries to the beginning of the list
+      const newEntries = response.data;
+      setLedgerData(prevData => [...newEntries, ...prevData]);
+      
+      setError(null);
+      
+      // Return the number of successfully created entries
+      return newEntries.length;
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        const errorMessage = `Duplicate entries detected: ${err.response.data.detail}. Please edit the existing entries instead.`;
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } else {
+        const errorMessage = err.response?.data?.detail || 'Failed to add AI assistant entries';
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      }
+    }
   };
 
   const handleManualAddEntries = async (entries: any[]) => {
@@ -159,11 +163,18 @@ export const useAccountingActions = (
       setLedgerData(prevData => [...newEntries, ...prevData]);
       
       setError(null);
+      
+      // Return the number of successfully created entries
+      return newEntries.length;
     } catch (err: any) {
       if (err.response?.status === 409) {
-        setError(`Duplicate entries detected: ${err.response.data.detail}. Please edit the existing entries instead.`);
+        const errorMessage = `Duplicate entries detected: ${err.response.data.detail}. Please edit the existing entries instead.`;
+        setError(errorMessage);
+        throw new Error(errorMessage);
       } else {
-        setError(err.response?.data?.detail || 'Failed to add manual entries');
+        const errorMessage = err.response?.data?.detail || 'Failed to add manual entries';
+        setError(errorMessage);
+        throw new Error(errorMessage);
       }
     } finally {
       setAddLoading(false);

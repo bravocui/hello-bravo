@@ -5,7 +5,7 @@ from models import User, LedgerEntry
 from auth import get_current_user
 from database import get_db
 from db_models import LedgerEntry as DBLedgerEntry
-from mock_data import MOCK_LEDGER_DATA
+
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/ledger", tags=["ledger"])
@@ -330,26 +330,4 @@ async def delete_ledger_entry(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete ledger entry: {str(e)}")
 
-@router.get("/mock-entries")
-async def get_mock_ledger_entries(
-    current_user: User = Depends(get_current_user)
-):
-    """Get mock ledger entries for development/testing"""
-    try:
-        # Convert mock data to LedgerEntry models
-        entries = []
-        for entry_data in MOCK_LEDGER_DATA:
-            entries.append(LedgerEntry(
-                id=entry_data["id"],
-                year=entry_data["year"],
-                month=entry_data["month"],
-                category=entry_data["category"],
-                amount=entry_data["amount"],
-                credit_card=entry_data["credit_card"],
-                user_name=entry_data["user_name"],
-                notes=entry_data.get("notes")
-            ))
-        
-        return entries
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load mock data: {str(e)}") 
+ 

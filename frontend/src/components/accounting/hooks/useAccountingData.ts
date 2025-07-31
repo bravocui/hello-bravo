@@ -10,13 +10,12 @@ export const useAccountingData = () => {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [spendingCategories, setSpendingCategories] = useState<SpendingCategory[]>([]);
 
-  const fetchLedgerData = useCallback(async (dataSource: 'database' | 'mock' = 'database') => {
+  const fetchLedgerData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const endpoint = dataSource === 'database' ? '/ledger/entries' : '/ledger/mock-entries';
-      const response = await api.get(endpoint);
+      const response = await api.get('/ledger/entries');
       setLedgerData(response.data);
     } catch (error) {
       console.error('Failed to fetch ledger data:', error);

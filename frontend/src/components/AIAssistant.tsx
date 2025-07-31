@@ -18,7 +18,7 @@ interface AIAssistantResponse {
 }
 
 interface AIAssistantProps {
-  onConfirmEntries: (entries: ExpenseEntry[], selectedUser?: string, selectedCreditCard?: string) => Promise<void>;
+  onConfirmEntries: (entries: ExpenseEntry[], selectedUser?: string, selectedCreditCard?: string) => Promise<number>;
   onClose: () => void;
   currentUser?: string;
   currentCreditCard?: string;
@@ -40,6 +40,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [createdEntriesCount, setCreatedEntriesCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -138,7 +139,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
     setSubmitError(null);
     
     try {
-      await onConfirmEntries(editingEntries, selectedUser, selectedCreditCard);
+      const createdCount = await onConfirmEntries(editingEntries, selectedUser, selectedCreditCard);
+      setCreatedEntriesCount(createdCount);
       setShowSuccessPopup(true);
     } catch (err: any) {
       setSubmitError(err.response?.data?.detail || err.message || 'Failed to add entries');
@@ -659,7 +661,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                 Items Added Successfully
               </h3>
               <p className="text-gray-600 mb-6">
-                {editingEntries.length} expense(s) have been added to your ledger.
+                {createdEntriesCount} expense {createdEntriesCount === 1 ? 'entry' : 'entries'} {createdEntriesCount === 1 ? 'has' : 'have'} been added to your ledger.
               </p>
               <button
                 onClick={() => {

@@ -10,7 +10,7 @@ import os
 from sqlalchemy.orm import Session
 from models import User
 from db_models import UserRole
-from mock_data import MOCK_USERS
+
 from database import get_db
 from services.user_service import UserService
 
@@ -22,9 +22,10 @@ JWT_COOKIE_NAME = "session_token"
 
 async def verify_google_token(id_token: str):
     """Verify Google ID token"""
-    # For demo tokens, skip verification
+        # For demo tokens, skip verification
     if id_token.startswith('demo-token-'):
-        return MOCK_USERS["demo-token"]
+        # TODO: Implement proper guest user handling
+        return {"name": "Guest User", "email": "guest@example.com", "role": "GUEST"}
     
     try:
         # Get Google's public keys

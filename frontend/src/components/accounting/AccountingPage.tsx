@@ -12,8 +12,10 @@ import MonthlyTrendChart from './components/MonthlyTrendChart';
 import CategoryDetails from './components/CategoryDetails';
 import CreditCardDetails from './components/CreditCardDetails';
 import DetailedDataTable from './components/DetailedDataTable';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AccountingPage: React.FC = () => {
+  const { user } = useAuth();
   const {
     ledgerData,
     setLedgerData,
@@ -27,16 +29,14 @@ const AccountingPage: React.FC = () => {
   } = useAccountingData();
 
   const {
-    selectedUser,
-    setSelectedUser,
+    selectedUsers,
+    setSelectedUsers,
     selectedCreditCard,
     setSelectedCreditCard,
     selectedYear,
     setSelectedYear,
     selectedMonth,
     setSelectedMonth,
-    dataSource,
-    setDataSource,
     selectedView,
     setSelectedView,
     uniqueUsers,
@@ -62,13 +62,13 @@ const AccountingPage: React.FC = () => {
     startEditing,
     cancelEditing,
     startAdding
-  } = useAccountingActions(ledgerData, setLedgerData, setError, dataSource);
+  } = useAccountingActions(ledgerData, setLedgerData, setError);
 
   // Filter data based on all filters
   const filteredData = useMemo(() => {
     return ledgerData.filter(entry => {
       // Filter by user
-      const userFilter = selectedUser === 'all' || entry.user_name === selectedUser;
+      const userFilter = selectedUsers.includes(entry.user_name);
 
       // Filter by credit card
       const creditCardFilter = selectedCreditCard === 'all' || entry.credit_card === selectedCreditCard;
@@ -81,7 +81,7 @@ const AccountingPage: React.FC = () => {
 
       return userFilter && creditCardFilter && yearFilter && monthFilter;
     });
-  }, [ledgerData, selectedUser, selectedCreditCard, selectedYear, selectedMonth]);
+  }, [ledgerData, selectedUsers, selectedCreditCard, selectedYear, selectedMonth]);
 
   // Calculate expense summaries based on filtered data
   const totalExpenses = filteredData.reduce((sum, entry) => sum + entry.amount, 0);
@@ -155,16 +155,14 @@ const AccountingPage: React.FC = () => {
         
         {/* Filter Controls */}
         <FilterControls
-          selectedUser={selectedUser}
-          setSelectedUser={setSelectedUser}
+          selectedUsers={selectedUsers}
+          setSelectedUsers={setSelectedUsers}
           selectedCreditCard={selectedCreditCard}
           setSelectedCreditCard={setSelectedCreditCard}
           selectedYear={selectedYear}
           setSelectedYear={setSelectedYear}
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}
-          dataSource={dataSource}
-          setDataSource={setDataSource}
           uniqueUsers={uniqueUsers}
           uniqueCreditCards={uniqueCreditCards}
           uniqueYears={uniqueYears}
@@ -205,7 +203,7 @@ const AccountingPage: React.FC = () => {
             setEditForm={setEditForm}
             editLoading={editLoading}
             deleteLoading={deleteLoading}
-            dataSource={dataSource}
+
             users={users}
             creditCards={creditCards}
             spendingCategories={spendingCategories}
@@ -237,10 +235,7 @@ const AccountingPage: React.FC = () => {
           <AIAssistant
             onConfirmEntries={handleAIAssistantEntries}
             onClose={() => setShowAIAssistant(false)}
-            currentUser={(() => {
-              const currentUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')!) : null;
-              return currentUser?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
-            })()}
+            currentUser={user?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '')}
             users={users}
             creditCards={creditCards}
           />

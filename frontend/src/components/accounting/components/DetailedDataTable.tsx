@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { BarChart3, ArrowUpDown, Bot, Plus, Edit, Save, X, Trash2 } from 'lucide-react';
-import { LedgerEntry, User, CreditCard, SpendingCategory, DataSource, TableSortField } from '../types';
+import { LedgerEntry, User, CreditCard, SpendingCategory, TableSortField } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { getCategoryIcon } from '../utils/categoryUtils';
 
@@ -11,7 +11,6 @@ interface DetailedDataTableProps {
   setEditForm: React.Dispatch<React.SetStateAction<Partial<LedgerEntry>>>;
   editLoading: boolean;
   deleteLoading: number | null;
-  dataSource: DataSource;
   users: User[];
   creditCards: CreditCard[];
   spendingCategories: SpendingCategory[];
@@ -30,7 +29,6 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
   setEditForm,
   editLoading,
   deleteLoading,
-  dataSource,
   users,
   creditCards,
   spendingCategories,
@@ -135,12 +133,7 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
           </button>
           <button
             onClick={onShowAIAssistant}
-            disabled={dataSource === 'mock'}
-            className={`group relative flex items-center px-4 py-2 rounded-lg transition-colors ${
-              dataSource === 'mock' 
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
+            className="group relative flex items-center px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
           >
             <Bot className="w-4 h-4" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
@@ -149,12 +142,7 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
           </button>
           <button
             onClick={onStartAdding}
-            disabled={dataSource === 'mock'}
-            className={`group relative flex items-center px-4 py-2 rounded-lg transition-colors ${
-              dataSource === 'mock' 
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                : 'bg-accounting-600 text-white hover:bg-accounting-700'
-            }`}
+            className="group relative flex items-center px-4 py-2 rounded-lg transition-colors bg-accounting-600 text-white hover:bg-accounting-700"
           >
             <Plus className="w-4 h-4" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
@@ -361,15 +349,13 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => onUpdateEntry(entry.id)}
-                        disabled={editLoading || dataSource === 'mock'}
+                        disabled={editLoading}
                         className={`flex items-center px-2 py-1 rounded text-xs ${
-                          dataSource === 'mock'
-                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                            : editLoading
+                          editLoading
                             ? 'bg-green-600 text-white opacity-50'
                             : 'bg-green-600 text-white hover:bg-green-700'
                         }`}
-                        title={dataSource === 'mock' ? 'Save disabled for mock data' : 'Save'}
+                        title="Save"
                       >
                         <Save className="w-3 h-3" />
                       </button>
@@ -385,27 +371,20 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => onStartEditing(entry)}
-                        disabled={dataSource === 'mock'}
-                        className={`flex items-center px-2 py-1 rounded text-xs ${
-                          dataSource === 'mock'
-                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        }`}
-                        title={dataSource === 'mock' ? 'Edit disabled for mock data' : 'Edit'}
+                        className="flex items-center px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                        title="Edit"
                       >
                         <Edit className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => onDeleteEntry(entry.id)}
-                        disabled={deleteLoading === entry.id || dataSource === 'mock'}
+                        disabled={deleteLoading === entry.id}
                         className={`flex items-center px-2 py-1 rounded text-xs ${
-                          dataSource === 'mock'
-                            ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                            : deleteLoading === entry.id
+                          deleteLoading === entry.id
                             ? 'bg-red-600 text-white opacity-50'
                             : 'bg-red-600 text-white hover:bg-red-700'
                         }`}
-                        title={dataSource === 'mock' ? 'Delete disabled for mock data' : 'Delete'}
+                        title="Delete"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
