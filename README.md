@@ -46,3 +46,4 @@ Create `.env` files in both frontend and backend directories with necessary API 
 - **Backend**: FastAPI, Python
 - **Authentication**: Google OAuth
 - **Styling**: Tailwind CSS for responsive design
+# Test workflow trigger
