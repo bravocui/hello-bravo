@@ -10,7 +10,7 @@ from app.handlers import setup_exception_handlers
 from app.startup import setup_database_startup
 
 # Import routers
-from routes.core import router as core_router
+from app.system import router as core_router
 from features.fitness import router as fitness_router
 from features.travel import router as travel_router
 from features.weather import router as weather_router
