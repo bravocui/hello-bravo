@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getVersionString } from '../config/version';
+import DeploymentStatus from './DeploymentStatus';
 
 interface HeaderProps {
   title: string;
@@ -49,10 +50,13 @@ const Header: React.FC<HeaderProps> = ({
             <div className={`w-8 h-8 bg-${iconColor}-100 rounded-lg flex items-center justify-center`}>
               <Icon className={`w-5 h-5 text-${iconColor}-600`} />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-              <p className="text-xs text-gray-500">{getVersionString()}</p>
-            </div>
+                          <div>
+                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+                <div className="flex items-center space-x-2">
+                  <p className="text-xs text-gray-500">{getVersionString()}</p>
+                  <DeploymentStatus />
+                </div>
+              </div>
           </div>
           
           {/* User Info and Logout */}
