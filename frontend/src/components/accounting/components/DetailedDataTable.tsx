@@ -66,24 +66,41 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
     setTableSortOrder('desc');
   };
 
-  // Sort table data
-  const sortedTableData = useMemo(() => {
+  // Helper function to get user name for sorting
+  const getUserName = (entry: LedgerEntry) => entry.user?.name || '';
+
+  const sortedData = React.useMemo(() => {
     const sorted = [...filteredData].sort((a, b) => {
-      // If a specific sort field is selected, use that
-      if (tableSortField !== 'year' || tableSortOrder !== 'desc') {
-        let aValue: any = a[tableSortField];
-        let bValue: any = b[tableSortField];
+      if (tableSortField) {
+        let aValue: any, bValue: any;
         
-        // Handle numeric fields
-        if (tableSortField === 'year' || tableSortField === 'month' || tableSortField === 'amount') {
-          aValue = Number(aValue);
-          bValue = Number(bValue);
-        }
-        
-        // Handle string fields
-        if (typeof aValue === 'string') {
-          aValue = aValue.toLowerCase();
-          bValue = bValue.toLowerCase();
+        switch (tableSortField) {
+          case 'year':
+            aValue = a.year;
+            bValue = b.year;
+            break;
+          case 'month':
+            aValue = a.month;
+            bValue = b.month;
+            break;
+          case 'user_name':
+            aValue = getUserName(a);
+            bValue = getUserName(b);
+            break;
+          case 'credit_card':
+            aValue = a.credit_card;
+            bValue = b.credit_card;
+            break;
+          case 'category':
+            aValue = a.category;
+            bValue = b.category;
+            break;
+          case 'amount':
+            aValue = a.amount;
+            bValue = b.amount;
+            break;
+          default:
+            return 0;
         }
         
         if (tableSortOrder === 'asc') {
@@ -100,8 +117,8 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
       if (a.month !== b.month) {
         return b.month - a.month; // Reverse order: December to January
       }
-      if (a.user_name !== b.user_name) {
-        return a.user_name.toLowerCase().localeCompare(b.user_name.toLowerCase());
+      if (getUserName(a) !== getUserName(b)) {
+        return getUserName(a).toLowerCase().localeCompare(getUserName(b).toLowerCase());
       }
       if (a.credit_card !== b.credit_card) {
         return a.credit_card.toLowerCase().localeCompare(b.credit_card.toLowerCase());
@@ -228,7 +245,7 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {sortedTableData.map((entry) => (
+            {sortedData.map((entry) => (
               <tr key={entry.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 text-sm text-gray-900">
                   {editingEntry === entry.id ? (
@@ -275,17 +292,19 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
                 <td className="px-6 py-4 text-sm text-gray-900">
                   {editingEntry === entry.id ? (
                     <select
-                      value={editForm.user_name || ''}
-                      onChange={(e) => setEditForm({...editForm, user_name: e.target.value, credit_card: ''})}
-                      className="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
+                      value={editForm.user_id || ''}
+                      onChange={(e) => setEditForm({...editForm, user_id: parseInt(e.target.value), credit_card: ''})}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                     >
                       <option value="">Select User</option>
-                      {Array.isArray(users) && users.map(user => (
-                        <option key={user.id} value={user.name}>{user.name}</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
                       ))}
                     </select>
                   ) : (
-                    <span className="break-words">{entry.user_name}</span>
+                    <span className="break-words">{entry.user?.name}</span>
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-900">
@@ -296,9 +315,9 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
                       className="w-32 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-accounting-500"
                     >
                       <option value="">Select Credit Card</option>
-                      {editForm.user_name ? (
-                        getCreditCardsForUser(editForm.user_name).length > 0 ? (
-                          getCreditCardsForUser(editForm.user_name).map(card => (
+                      {editForm.user_id ? (
+                        getCreditCardsForUser(users.find(user => user.id === editForm.user_id)?.name || '').length > 0 ? (
+                          getCreditCardsForUser(users.find(user => user.id === editForm.user_id)?.name || '').map(card => (
                             <option key={card.id} value={card.name}>{card.name}</option>
                           ))
                         ) : (
@@ -397,7 +416,7 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
         </table>
       </div>
       
-      {sortedTableData.length === 0 && (
+      {sortedData.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           No data available for the selected filters
         </div>

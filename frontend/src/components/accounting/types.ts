@@ -5,8 +5,13 @@ export interface LedgerEntry {
   category: string;
   amount: number;
   credit_card: string;
-  user_name: string;
   notes?: string;
+  user_id?: number;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 export interface User {

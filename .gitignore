@@ -176,3 +176,5 @@ web/.yarn/*
 # Environment backup files
 *.env.backup
 .env.backup
+backend/.env.dev
+backend/.env.prod

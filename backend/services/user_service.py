@@ -193,19 +193,8 @@ class UserService:
         if "role" in user_data:
             db_user.role = user_data["role"]
         
-        # If name changed, update all related entries
-        if name_changed:
-            try:
-                from db_models import LedgerEntry
-                
-                # Update ledger entries
-                ledger_entries = db.query(LedgerEntry).filter(LedgerEntry.user_name == old_name).all()
-                for entry in ledger_entries:
-                    entry.user_name = user_data["name"]
-                
-            except Exception as e:
-                db.rollback()
-                return None
+        # Note: No need to update ledger entries since they now use user_id
+        # The user_id relationship will automatically maintain referential integrity
         
         db.commit()
         db.refresh(db_user)

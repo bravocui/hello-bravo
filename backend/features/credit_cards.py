@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from models import User, CreditCard, CreateCreditCardRequest, UpdateCreditCardRequest
 from auth import get_current_user
@@ -16,22 +16,20 @@ async def get_credit_cards(
     """Get all credit cards - admin can see all, others see only their own"""
     try:
         if current_user.role == "ADMIN":
-            credit_cards = db.query(DBCreditCard).all()
+            credit_cards = db.query(DBCreditCard).options(joinedload(DBCreditCard.user)).all()
         else:
-            credit_cards = db.query(DBCreditCard).filter(
+            credit_cards = db.query(DBCreditCard).options(joinedload(DBCreditCard.user)).filter(
                 DBCreditCard.user_id == current_user.id
             ).all()
         
-        # Convert to Pydantic models for response with user information
+        # Convert to response format with user information
         cards = []
         for card in credit_cards:
-            # Get user information
-            user = db.query(DBUser).filter(DBUser.id == card.user_id).first()
             user_info = {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email
-            } if user else None
+                "id": card.user.id,
+                "name": card.user.name,
+                "email": card.user.email
+            } if card.user else None
             
             cards.append({
                 "id": card.id,
@@ -71,13 +69,12 @@ async def create_credit_card(
         db.commit()
         db.refresh(db_card)
         
-        # Return the created card
-        user = db.query(DBUser).filter(DBUser.id == db_card.user_id).first()
+        # Return the created card with user information
         user_info = {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email
-        } if user else None
+            "id": db_user.id,
+            "name": db_user.name,
+            "email": db_user.email
+        }
         
         return {
             "id": db_card.id,
@@ -102,7 +99,7 @@ async def get_credit_card(
 ):
     """Get a specific credit card"""
     try:
-        query = db.query(DBCreditCard).filter(DBCreditCard.id == card_id)
+        query = db.query(DBCreditCard).options(joinedload(DBCreditCard.user)).filter(DBCreditCard.id == card_id)
         
         # If user is admin, don't filter by user_id
         if current_user.role != "ADMIN":
@@ -113,13 +110,12 @@ async def get_credit_card(
         if not card:
             raise HTTPException(status_code=404, detail="Credit card not found")
         
-        # Get user information
-        user = db.query(DBUser).filter(DBUser.id == card.user_id).first()
+        # Get user information from the joined load
         user_info = {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email
-        } if user else None
+            "id": card.user.id,
+            "name": card.user.name,
+            "email": card.user.email
+        } if card.user else None
         
         return {
             "id": card.id,
@@ -145,7 +141,7 @@ async def update_credit_card(
     """Update a credit card and update all related ledger entries"""
     try:
         # Find the card - allow admin users to edit any card
-        query = db.query(DBCreditCard).filter(DBCreditCard.id == card_id)
+        query = db.query(DBCreditCard).options(joinedload(DBCreditCard.user)).filter(DBCreditCard.id == card_id)
         
         # If user is admin, don't filter by user_id
         if current_user.role != "ADMIN":
@@ -187,13 +183,12 @@ async def update_credit_card(
         db.commit()
         db.refresh(db_card)
         
-        # Get user information
-        user = db.query(DBUser).filter(DBUser.id == db_card.user_id).first()
+        # Get user information from the joined load
         user_info = {
-            "id": user.id,
-            "name": user.name,
-            "email": user.email
-        } if user else None
+            "id": db_card.user.id,
+            "name": db_card.user.name,
+            "email": db_card.user.email
+        } if db_card.user else None
         
         return {
             "card": {

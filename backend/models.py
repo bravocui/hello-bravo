@@ -66,7 +66,24 @@ class LedgerEntry(BaseModel):
     category: str
     amount: float
     credit_card: str
-    user_name: str
+    notes: Optional[str] = None
+
+class CreateLedgerEntryRequest(BaseModel):
+    year: int
+    month: int
+    category: str
+    amount: float
+    credit_card: str
+    user_id: int
+    notes: Optional[str] = None
+
+class UpdateLedgerEntryRequest(BaseModel):
+    year: int
+    month: int
+    category: str
+    amount: float
+    credit_card: str
+    user_id: int
     notes: Optional[str] = None
 
 class CreditCard(BaseModel):

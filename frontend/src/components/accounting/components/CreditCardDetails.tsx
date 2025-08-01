@@ -12,7 +12,7 @@ interface CreditCardDetailsProps {
 const CreditCardDetails: React.FC<CreditCardDetailsProps> = ({ filteredData }) => {
   // Group by user+card combination
   const userCardTotals = filteredData.reduce((acc, entry) => {
-    const key = `${entry.user_name}+${entry.credit_card}`;
+    const key = `${entry.user?.name}+${entry.credit_card}`;
     if (!acc[key]) {
       acc[key] = 0;
     }
@@ -42,7 +42,7 @@ const CreditCardDetails: React.FC<CreditCardDetailsProps> = ({ filteredData }) =
   const createUserCardHistogramData = (userCardKey: string) => {
     const [userName, cardName] = userCardKey.split('+');
     const userCardEntries = filteredData.filter(entry => 
-      entry.user_name === userName && entry.credit_card === cardName
+      entry.user?.name === userName && entry.credit_card === cardName
     );
     const monthlyData = userCardEntries.reduce((acc, entry) => {
       const key = `${entry.year}-${entry.month}`;

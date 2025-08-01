@@ -10,7 +10,7 @@ export const useAccountingFilters = (ledgerData: LedgerEntry[]) => {
 
   // Get unique users for the selector
   const uniqueUsers = useMemo(() => {
-    const users = new Set(ledgerData.map(entry => entry.user_name));
+    const users = new Set(ledgerData.map(entry => entry.user?.name).filter((name): name is string => Boolean(name)));
     return Array.from(users).sort();
   }, [ledgerData]);
 

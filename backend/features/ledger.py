@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
-from models import User, LedgerEntry
+from models import User, LedgerEntry, CreateLedgerEntryRequest, UpdateLedgerEntryRequest
 from auth import get_current_user
 from database import get_db
-from db_models import LedgerEntry as DBLedgerEntry
+from db_models import LedgerEntry as DBLedgerEntry, User as DBUser
 
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/ledger", tags=["ledger"])
 
 class BatchLedgerEntryRequest(BaseModel):
-    entries: List[LedgerEntry]
+    entries: List[CreateLedgerEntryRequest]
 
 @router.get("/entries")
 async def get_ledger_entries(
@@ -22,25 +22,31 @@ async def get_ledger_entries(
     try:
         # If user is admin, get all entries; otherwise, filter by user_id
         if current_user.role == "ADMIN":
-            ledger_entries = db.query(DBLedgerEntry).all()
+            ledger_entries = db.query(DBLedgerEntry).options(joinedload(DBLedgerEntry.user)).all()
         else:
-            ledger_entries = db.query(DBLedgerEntry).filter(
+            ledger_entries = db.query(DBLedgerEntry).options(joinedload(DBLedgerEntry.user)).filter(
                 DBLedgerEntry.user_id == current_user.id
             ).all()
         
-        # Convert to Pydantic models for response
+        # Convert to response format with user information
         entries = []
         for entry in ledger_entries:
-            entries.append(LedgerEntry(
-                id=entry.id,
-                year=entry.year,
-                month=entry.month,
-                category=entry.category,
-                amount=entry.amount,
-                credit_card=entry.credit_card,
-                user_name=entry.user_name,
-                notes=entry.notes
-            ))
+            user_info = {
+                "id": entry.user.id,
+                "name": entry.user.name,
+                "email": entry.user.email
+            } if entry.user else None
+            
+            entries.append({
+                "id": entry.id,
+                "year": entry.year,
+                "month": entry.month,
+                "category": entry.category,
+                "amount": entry.amount,
+                "credit_card": entry.credit_card,
+                "notes": entry.notes,
+                "user": user_info
+            })
         
         return entries
     except Exception as e:
@@ -48,24 +54,22 @@ async def get_ledger_entries(
 
 @router.post("/entries")
 async def create_ledger_entry(
-    entry: LedgerEntry,
+    entry: CreateLedgerEntryRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new ledger entry"""
     try:
-        # Find the user by name to get the correct user_id
-        from services.user_service import UserService
-        db_user = UserService.get_user_by_name(db, entry.user_name)
-        
+        # Verify the user exists
+        db_user = db.query(DBUser).filter(DBUser.id == entry.user_id).first()
         if not db_user:
-            raise HTTPException(status_code=400, detail=f"User '{entry.user_name}' not found")
+            raise HTTPException(status_code=400, detail=f"User with ID {entry.user_id} not found")
         
         # Check for existing entry with same key tuple
         existing_entry = db.query(DBLedgerEntry).filter(
             DBLedgerEntry.year == entry.year,
             DBLedgerEntry.month == entry.month,
-            DBLedgerEntry.user_name == entry.user_name,
+            DBLedgerEntry.user_id == entry.user_id,
             DBLedgerEntry.credit_card == entry.credit_card,
             DBLedgerEntry.category == entry.category
         ).first()
@@ -73,18 +77,17 @@ async def create_ledger_entry(
         if existing_entry:
             raise HTTPException(
                 status_code=409, 
-                detail=f"An entry for {entry.category} already exists for {entry.year}/{entry.month:02d}, {entry.user_name}, {entry.credit_card} (existing amount: ${existing_entry.amount:.2f}). Please edit the existing entry instead."
+                detail=f"An entry for {entry.category} already exists for {entry.year}/{entry.month:02d}, user {db_user.name}, {entry.credit_card} (existing amount: ${existing_entry.amount:.2f}). Please edit the existing entry instead."
             )
         
         # Create new database entry
         db_entry = DBLedgerEntry(
-            user_id=db_user.id,
+            user_id=entry.user_id,
             year=entry.year,
             month=entry.month,
             category=entry.category,
             amount=entry.amount,
             credit_card=entry.credit_card,
-            user_name=entry.user_name,
             notes=entry.notes
         )
         
@@ -92,17 +95,23 @@ async def create_ledger_entry(
         db.commit()
         db.refresh(db_entry)
         
-        # Return the created entry
-        return LedgerEntry(
-            id=db_entry.id,
-            year=db_entry.year,
-            month=db_entry.month,
-            category=db_entry.category,
-            amount=db_entry.amount,
-            credit_card=db_entry.credit_card,
-            user_name=db_entry.user_name,
-            notes=db_entry.notes
-        )
+        # Return the created entry with user information
+        user_info = {
+            "id": db_user.id,
+            "name": db_user.name,
+            "email": db_user.email
+        }
+        
+        return {
+            "id": db_entry.id,
+            "year": db_entry.year,
+            "month": db_entry.month,
+            "category": db_entry.category,
+            "amount": db_entry.amount,
+            "credit_card": db_entry.credit_card,
+            "notes": db_entry.notes,
+            "user": user_info
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -129,17 +138,16 @@ async def create_ledger_entries_batch(
         duplicate_entries = []
         
         for entry in batch_request.entries:
-            # Find the user by name to get the correct user_id
-            db_user = UserService.get_user_by_name(db, entry.user_name)
-            
+            # Verify the user exists
+            db_user = db.query(DBUser).filter(DBUser.id == entry.user_id).first()
             if not db_user:
-                raise HTTPException(status_code=400, detail=f"User '{entry.user_name}' not found")
+                raise HTTPException(status_code=400, detail=f"User with ID {entry.user_id} not found")
             
             # Check for existing entry with same key tuple
             existing_entry = db.query(DBLedgerEntry).filter(
                 DBLedgerEntry.year == entry.year,
                 DBLedgerEntry.month == entry.month,
-                DBLedgerEntry.user_name == entry.user_name,
+                DBLedgerEntry.user_id == entry.user_id,
                 DBLedgerEntry.credit_card == entry.credit_card,
                 DBLedgerEntry.category == entry.category
             ).first()
@@ -148,7 +156,7 @@ async def create_ledger_entries_batch(
                 duplicate_entries.append({
                     "year": entry.year,
                     "month": entry.month,
-                    "user_name": entry.user_name,
+                    "user_id": entry.user_id,
                     "credit_card": entry.credit_card,
                     "category": entry.category,
                     "existing_amount": existing_entry.amount
@@ -156,13 +164,12 @@ async def create_ledger_entries_batch(
             else:
                 # Create new database entry
                 db_entry = DBLedgerEntry(
-                    user_id=db_user.id,
+                    user_id=entry.user_id,
                     year=entry.year,
                     month=entry.month,
                     category=entry.category,
                     amount=entry.amount,
                     credit_card=entry.credit_card,
-                    user_name=entry.user_name,
                     notes=entry.notes
                 )
                 
@@ -182,11 +189,11 @@ async def create_ledger_entries_batch(
             duplicate_details = []
             for dup in duplicate_entries:
                 duplicate_details.append(
-                    f"{dup['year']}/{dup['month']:02d}, {dup['user_name']}, {dup['credit_card']}, {dup['category']} (existing amount: ${dup['existing_amount']:.2f})"
+                    f"{dup['year']}/{dup['month']:02d}, user {dup['user_id']}, {dup['credit_card']}, {dup['category']} (existing amount: ${dup['existing_amount']:.2f})"
                 )
             
             # Create a more helpful error message
-            error_message = f"The following categories already have entries for {batch_request.entries[0].year}/{batch_request.entries[0].month:02d}, {batch_request.entries[0].user_name}, {batch_request.entries[0].credit_card}: {', '.join(duplicate_categories)}. Please edit the existing entries instead."
+            error_message = f"The following categories already have entries for {batch_request.entries[0].year}/{batch_request.entries[0].month:02d}, user {batch_request.entries[0].user_id}, {batch_request.entries[0].credit_card}: {', '.join(duplicate_categories)}. Please edit the existing entries instead."
             
             raise HTTPException(
                 status_code=409,
@@ -198,18 +205,30 @@ async def create_ledger_entries_batch(
         
         # Refresh all entries and return them
         result_entries = []
+        
+        # Get all user IDs from created entries
+        user_ids = [entry.user_id for entry in created_entries]
+        users = {user.id: user for user in db.query(DBUser).filter(DBUser.id.in_(user_ids)).all()}
+        
         for db_entry in created_entries:
             db.refresh(db_entry)
-            result_entries.append(LedgerEntry(
-                id=db_entry.id,
-                year=db_entry.year,
-                month=db_entry.month,
-                category=db_entry.category,
-                amount=db_entry.amount,
-                credit_card=db_entry.credit_card,
-                user_name=db_entry.user_name,
-                notes=db_entry.notes
-            ))
+            user = users.get(db_entry.user_id)
+            user_info = {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email
+            } if user else None
+            
+            result_entries.append({
+                "id": db_entry.id,
+                "year": db_entry.year,
+                "month": db_entry.month,
+                "category": db_entry.category,
+                "amount": db_entry.amount,
+                "credit_card": db_entry.credit_card,
+                "notes": db_entry.notes,
+                "user": user_info
+            })
         
         return result_entries
         
@@ -227,7 +246,7 @@ async def get_ledger_entry(
 ):
     """Get a specific ledger entry by ID"""
     try:
-        entry = db.query(DBLedgerEntry).filter(
+        entry = db.query(DBLedgerEntry).options(joinedload(DBLedgerEntry.user)).filter(
             DBLedgerEntry.id == entry_id,
             DBLedgerEntry.user_id == current_user.id
         ).first()
@@ -235,16 +254,23 @@ async def get_ledger_entry(
         if not entry:
             raise HTTPException(status_code=404, detail="Ledger entry not found")
         
-        return LedgerEntry(
-            id=entry.id,
-            year=entry.year,
-            month=entry.month,
-            category=entry.category,
-            amount=entry.amount,
-            credit_card=entry.credit_card,
-            user_name=entry.user_name,
-            notes=entry.notes
-        )
+        # Get user information from the joined load
+        user_info = {
+            "id": entry.user.id,
+            "name": entry.user.name,
+            "email": entry.user.email
+        } if entry.user else None
+        
+        return {
+            "id": entry.id,
+            "year": entry.year,
+            "month": entry.month,
+            "category": entry.category,
+            "amount": entry.amount,
+            "credit_card": entry.credit_card,
+            "notes": entry.notes,
+            "user": user_info
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -253,14 +279,14 @@ async def get_ledger_entry(
 @router.put("/entries/{entry_id}")
 async def update_ledger_entry(
     entry_id: int,
-    entry_update: LedgerEntry,
+    entry_update: UpdateLedgerEntryRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Update a ledger entry"""
     try:
         # Find the entry - allow admin users to edit any entry
-        query = db.query(DBLedgerEntry).filter(DBLedgerEntry.id == entry_id)
+        query = db.query(DBLedgerEntry).options(joinedload(DBLedgerEntry.user)).filter(DBLedgerEntry.id == entry_id)
         
         # If user is admin, don't filter by user_id
         if current_user.role != "ADMIN":
@@ -277,22 +303,28 @@ async def update_ledger_entry(
         db_entry.category = entry_update.category
         db_entry.amount = entry_update.amount
         db_entry.credit_card = entry_update.credit_card
-        db_entry.user_name = entry_update.user_name
         db_entry.notes = entry_update.notes
         
         db.commit()
         db.refresh(db_entry)
         
-        return LedgerEntry(
-            id=db_entry.id,
-            year=db_entry.year,
-            month=db_entry.month,
-            category=db_entry.category,
-            amount=db_entry.amount,
-            credit_card=db_entry.credit_card,
-            user_name=db_entry.user_name,
-            notes=db_entry.notes
-        )
+        # Get user information from the joined load
+        user_info = {
+            "id": db_entry.user.id,
+            "name": db_entry.user.name,
+            "email": db_entry.user.email
+        } if db_entry.user else None
+        
+        return {
+            "id": db_entry.id,
+            "year": db_entry.year,
+            "month": db_entry.month,
+            "category": db_entry.category,
+            "amount": db_entry.amount,
+            "credit_card": db_entry.credit_card,
+            "notes": db_entry.notes,
+            "user": user_info
+        }
     except HTTPException:
         raise
     except Exception as e:

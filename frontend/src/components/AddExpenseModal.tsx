@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 interface AddExpenseForm {
   year?: number;
   month?: number;
-  user_name?: string;
+  user_id?: number;
   credit_card?: string;
   categoryAmounts?: { [category: string]: number };
   hiddenCategories?: Set<string>;
@@ -29,28 +29,31 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const { user } = useAuth();
   const [addForm, setAddForm] = useState<AddExpenseForm>(() => {
     const now = new Date();
-    const defaultUserName = user?.name || (Array.isArray(users) && users.length > 0 ? users[0].name : '');
+    const defaultUser = user?.name ? users.find(u => u.name === user.name) : users[0];
     
     return {
       year: now.getFullYear(),
       month: now.getMonth() + 1,
-      user_name: defaultUserName,
+      user_id: defaultUser?.id,
       credit_card: '',
       categoryAmounts: {},
       hiddenCategories: new Set()
     };
   });
 
-  // Update user_name when user changes
+  // Update user_id when user changes
   useEffect(() => {
-    if (user?.name && (!addForm.user_name || addForm.user_name !== user.name)) {
-      setAddForm(prev => ({
-        ...prev,
-        user_name: user.name,
-        credit_card: '' // Reset credit card when user changes
-      }));
+    if (user?.name) {
+      const currentUser = users.find(u => u.name === user.name);
+      if (currentUser && (!addForm.user_id || addForm.user_id !== currentUser.id)) {
+        setAddForm(prev => ({
+          ...prev,
+          user_id: currentUser.id,
+          credit_card: '' // Reset credit card when user changes
+        }));
+      }
     }
-  }, [user?.name, addForm.user_name]);
+  }, [user?.name, addForm.user_id, users]);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -87,7 +90,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setError(null);
       
       // Validate required fields
-      if (!addForm.year || !addForm.month || !addForm.user_name || !addForm.credit_card || !addForm.categoryAmounts) {
+      if (!addForm.year || !addForm.month || !addForm.user_id || !addForm.credit_card || !addForm.categoryAmounts) {
         setError('Please fill in all required fields');
         return;
       }
@@ -105,7 +108,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         .map(([category, amount]) => ({
           year: addForm.year,
           month: addForm.month,
-          user_name: addForm.user_name,
+          user_id: addForm.user_id,
           credit_card: addForm.credit_card,
           category: category,
           amount: amount,
@@ -212,13 +215,13 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">User</label>
                   <select
-                    value={addForm.user_name || ''}
-                    onChange={(e) => setAddForm({...addForm, user_name: e.target.value, credit_card: ''})}
+                    value={addForm.user_id || ''}
+                    onChange={(e) => setAddForm({...addForm, user_id: parseInt(e.target.value), credit_card: ''})}
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">Select User</option>
                     {Array.isArray(users) && users.map(user => (
-                      <option key={user.id} value={user.name}>{user.name}</option>
+                      <option key={user.id} value={user.id}>{user.name}</option>
                     ))}
                   </select>
                 </div>
@@ -230,9 +233,9 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                     className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">Select Credit Card</option>
-                    {addForm.user_name ? (
-                      getCreditCardsForUser(addForm.user_name).length > 0 ? (
-                        getCreditCardsForUser(addForm.user_name).map(card => (
+                    {addForm.user_id ? (
+                      getCreditCardsForUser(users.find(u => u.id === addForm.user_id)?.name || '').length > 0 ? (
+                        getCreditCardsForUser(users.find(u => u.id === addForm.user_id)?.name || '').map(card => (
                           <option key={card.id} value={card.name}>{card.name}</option>
                         ))
                       ) : (

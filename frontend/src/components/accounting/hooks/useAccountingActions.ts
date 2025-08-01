@@ -23,7 +23,7 @@ export const useAccountingActions = (
       category: entry.category,
       amount: entry.amount,
       credit_card: entry.credit_card,
-      user_name: entry.user_name,
+      user_id: entry.user_id,
       notes: entry.notes
     });
   };
@@ -51,7 +51,7 @@ export const useAccountingActions = (
         category: editForm.category || originalEntry.category,
         amount: editForm.amount || originalEntry.amount,
         credit_card: editForm.credit_card || originalEntry.credit_card,
-        user_name: editForm.user_name || originalEntry.user_name,
+        user_id: editForm.user_id || originalEntry.user_id,
         notes: editForm.notes || originalEntry.notes
       };
       
@@ -108,7 +108,7 @@ export const useAccountingActions = (
       // Use selected user and credit card, or fall back to defaults
       const currentUser = localStorage.getItem('user_data') ? JSON.parse(localStorage.getItem('user_data')!) : null;
       const defaultUserName = selectedUser || currentUser?.name || '';
-      const userCreditCards = ledgerData.filter(entry => entry.user_name === defaultUserName);
+      const userCreditCards = ledgerData.filter(entry => entry.user?.name === defaultUserName);
       const defaultCreditCard = selectedCreditCard || (userCreditCards.length > 0 ? userCreditCards[0].credit_card : '');
       
       // Get current date for default year/month
@@ -178,6 +178,23 @@ export const useAccountingActions = (
       }
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const createLedgerEntry = async (entry: any) => {
+    try {
+      const response = await api.post('/ledger/entries', {
+        year: entry.year,
+        month: entry.month,
+        user_id: entry.user_id,
+        credit_card: entry.credit_card,
+        category: entry.category,
+        amount: entry.amount,
+        notes: entry.notes
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to create entry');
     }
   };
 

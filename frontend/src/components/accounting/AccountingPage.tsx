@@ -68,7 +68,7 @@ const AccountingPage: React.FC = () => {
   const filteredData = useMemo(() => {
     return ledgerData.filter(entry => {
       // Filter by user
-      const userFilter = selectedUsers.includes(entry.user_name);
+      const userFilter = selectedUsers.includes(entry.user?.name || '');
 
       // Filter by credit card
       const creditCardFilter = selectedCreditCard === 'all' || entry.credit_card === selectedCreditCard;
