@@ -59,34 +59,6 @@ Set these in GitHub repository Settings → Secrets and variables → Actions �
 
 ### 1.2 Local Deployment (Alternative)
 
-#### Pre-deployment Checklist
-- [ ] Environment variables set in `frontend/.env.production`
-- [ ] `REACT_APP_API_URL` points to production backend
-- [ ] `REACT_APP_BASENAME` set to `/hello-bravo` for GitHub Pages
-- [ ] `REACT_APP_GOOGLE_CLIENT_ID` set to Google oAuth ID
-
-#### Deployment Steps
-
-```bash
-# 1. Navigate to frontend directory
-cd frontend
-
-# 2. Set environment variables (if not in .env.production)
-export REACT_APP_API_URL=https://your-service-name-{PROJECT_ID}.us-central1.run.app
-export REACT_APP_BASENAME=/hello-bravo
-export REACT_APP_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
-export REACT_APP_DEPLOYMENT_METHOD=manual
-
-# 3. Build for production
-npm run build
-
-# 4. Deploy to GitHub Pages
-npm run deploy
-
-# 5. Verify deployment
-# Wait 2-3 minutes, then check: https://bravocui.github.io/hello-bravo/
-```
-
 #### Environment Variables (Local File)
 Set these in `frontend/.env.production`:
 
@@ -95,6 +67,22 @@ REACT_APP_API_URL=https://your-service-name-{PROJECT_ID}.us-central1.run.app
 REACT_APP_BASENAME=/hello-bravo
 REACT_APP_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
 REACT_APP_DEPLOYMENT_METHOD=manual
+```
+
+#### Deployment Steps
+
+```bash
+# 1. Navigate to frontend directory
+cd frontend
+
+# 2. Build for production
+npm run build
+
+# 3. Deploy to GitHub Pages
+npm run deploy
+
+# 4. Verify deployment
+# Wait 2-3 minutes, then check: https://bravocui.github.io/hello-bravo/
 ```
 
 #### Benefits

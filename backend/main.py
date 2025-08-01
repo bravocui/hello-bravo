@@ -28,8 +28,7 @@ setup_cors_middleware(app)
 setup_exception_handlers(app)
 setup_database_startup(app)
 
-# Include all routers
-app.include_router(core_router)
+# Include all routers (API routes first)
 app.include_router(fitness_router)
 app.include_router(travel_router)
 app.include_router(weather_router)
@@ -38,6 +37,8 @@ app.include_router(users_router)
 app.include_router(credit_cards_router)
 app.include_router(spending_categories_router)
 app.include_router(ai_assistant_router)
+# Include core router last (contains catch-all route)
+app.include_router(core_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 

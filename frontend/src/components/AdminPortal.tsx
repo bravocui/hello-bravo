@@ -125,10 +125,14 @@ const AdminPortal: React.FC = () => {
     try {
       setUsersLoading(true);
       const response = await api.get('/users/admin/list');
-      setUsers(response.data);
+      
+      // Ensure we always set an array
+      const usersData = Array.isArray(response.data) ? response.data : [];
+      setUsers(usersData);
       setError(null);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch users');
+      setUsers([]); // Ensure users is always an array
     } finally {
       setUsersLoading(false);
     }
@@ -611,7 +615,7 @@ const AdminPortal: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
+                {Array.isArray(users) ? users.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       {user.picture_url ? (
@@ -715,7 +719,13 @@ const AdminPortal: React.FC = () => {
                       )}
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                      No users available
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -760,11 +770,11 @@ const AdminPortal: React.FC = () => {
                       required
                     >
                       <option value="">Select User</option>
-                      {users.map((user) => (
+                      {Array.isArray(users) ? users.map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.name} ({user.email})
                         </option>
-                      ))}
+                      )) : null}
                     </select>
                     <input
                       type="date"
@@ -829,11 +839,11 @@ const AdminPortal: React.FC = () => {
                             className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                           >
                             <option value="">Select User</option>
-                            {users.map((user) => (
+                            {Array.isArray(users) ? users.map((user) => (
                               <option key={user.id} value={user.id}>
                                 {user.name} ({user.email})
                               </option>
-                            ))}
+                            )) : null}
                           </select>
                         ) : (
                           <div className="text-sm text-gray-900">{card.user?.name}</div>

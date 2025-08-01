@@ -76,50 +76,83 @@ The frontend will be available at: http://localhost:3000
 
 ### Backend Environment Variables
 
-Copy the example environment file and configure it:
+The backend uses environment-specific configuration files. For development, create a `.env.dev` file:
 
 ```bash
 cd backend
-cp env.example .env
+cp env.example .env.dev
 ```
 
-Edit `.env` with your actual values:
+Edit `.env.dev` with your actual values:
 
 ```env
+# Environment setting
+ENVIRONMENT=development
+
 # Database Configuration (optional for development)
 DATABASE_URL=postgresql://user:password@localhost/life_tracker
 
 # JWT Configuration
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+JWT_SECRET=your-secret-key-here
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
+JWT_DEFAULT_EXPIRE_MINUTES=60
+JWT_STAY_LOGGED_IN_EXPIRE_MINUTES=10080
 
 # Google OAuth Configuration (optional for development)
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Weather API Configuration (optional for development)
-WEATHER_API_KEY=your-weather-api-key
 
 # CORS Configuration
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# Google Cloud Storage (optional)
+GCS_BUCKET_NAME=your-bucket-name
+GCS_PREFIX=dev/
 ```
 
 ### Frontend Environment Variables
 
-Create a `.env` file in the frontend directory:
+Create a `.env.development` file in the frontend directory:
 
 ```bash
 cd frontend
-touch .env
+touch .env.development
 ```
 
 Add the following content:
 
 ```env
 REACT_APP_API_URL=http://localhost:8000
+REACT_APP_BASENAME=
 REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
+
+## Production Deployment
+
+This project is configured for production deployment with:
+
+- **Frontend**: GitHub Pages (automated via GitHub Actions)
+- **Backend**: Google Cloud Run (automated via Cloud Build)
+
+### Production Environment Variables
+
+**Frontend (GitHub Repository Secrets):**
+```
+REACT_APP_API_URL=https://your-service-name-{PROJECT_ID}.us-central1.run.app
+REACT_APP_BASENAME=/hello-bravo
+REACT_APP_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+```
+
+**Backend (Google Cloud Run Console):**
+```
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+JWT_SECRET=your-secure-jwt-secret
+ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
+DATABASE_URL=your-database-connection-string
+GOOGLE_API_KEY=your-google-ai-api-key
+```
+
+For detailed deployment instructions, see [OPERATION_PLAYBOOK.md](./OPERATION_PLAYBOOK.md).
 
 ## Features
 
@@ -127,6 +160,13 @@ REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 - Google OAuth integration
 - JWT token-based authentication
 - Protected routes
+- Session management with cookies
+
+### 💰 Accounting & Finance
+- Expense tracking and categorization
+- Credit card management
+- Monthly spending analysis
+- Interactive charts and data visualization
 
 ### 💪 Fitness Tracking
 - Log workouts and activities
@@ -146,6 +186,11 @@ REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 - Weather alerts
 - Interactive weather cards
 
+### 🤖 AI Assistant
+- Intelligent expense categorization
+- Financial insights and recommendations
+- Natural language processing
+
 ### 📱 Responsive Design
 - Mobile-friendly interface
 - Desktop-optimized layout
@@ -160,18 +205,27 @@ REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 hello-bravo/
 ├── backend/                 # FastAPI backend
 │   ├── main.py             # Main application file
+│   ├── config.py           # Configuration management
 │   ├── requirements.txt    # Python dependencies
-│   └── env.example         # Environment variables template
+│   ├── env.example         # Environment variables template
+│   ├── features/           # Feature modules
+│   ├── services/           # Business logic services
+│   ├── database/           # Database models and config
+│   └── alembic/            # Database migrations
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/     # React components
+│   │   │   ├── accounting/ # Accounting features
+│   │   │   └── travel/     # Travel features
 │   │   ├── contexts/       # React contexts
+│   │   ├── config/         # Configuration files
 │   │   ├── App.tsx         # Main app component
 │   │   └── index.tsx       # App entry point
 │   ├── public/             # Static files
 │   ├── package.json        # Node.js dependencies
 │   └── tailwind.config.js  # Tailwind CSS configuration
 ├── start-dev.sh            # Development startup script
+├── OPERATION_PLAYBOOK.md   # Production deployment guide
 ├── README.md               # Project overview
 └── SETUP.md               # This setup guide
 ```
@@ -183,11 +237,14 @@ hello-bravo/
 # Start development server
 uvicorn main:app --reload
 
-# Run tests (when implemented)
-pytest
+# Run database migrations
+alembic upgrade head
 
 # Format code
 black .
+
+# Run tests (when implemented)
+pytest
 ```
 
 #### Frontend
@@ -197,6 +254,9 @@ npm start
 
 # Build for production
 npm run build
+
+# Deploy to GitHub Pages
+npm run deploy
 
 # Run tests
 npm test
@@ -236,10 +296,26 @@ npm run format
    npm install
    ```
 
-4. **CORS issues**
+4. **Environment configuration issues**
+   ```bash
+   # Check environment files exist
+   ls -la backend/.env*
+   ls -la frontend/.env*
+   
+   # Verify environment variables are loaded
+   # Backend will print configuration on startup
+   # Frontend: check browser console for API_URL
+   ```
+
+5. **CORS issues**
    - Make sure both servers are running
    - Check that the frontend is accessing the correct backend URL
-   - Verify CORS configuration in backend
+   - Verify CORS configuration in backend `ALLOWED_ORIGINS`
+
+6. **Authentication issues**
+   - Verify Google OAuth client ID is set correctly
+   - Check JWT_SECRET is configured
+   - Ensure CORS allows credentials
 
 ### Getting Help
 
@@ -249,6 +325,7 @@ If you encounter any issues:
 2. Verify all prerequisites are installed correctly
 3. Ensure all environment variables are set
 4. Check that both servers are running on the correct ports
+5. Review the [OPERATION_PLAYBOOK.md](./OPERATION_PLAYBOOK.md) for production-specific issues
 
 ## Next Steps
 
@@ -258,7 +335,7 @@ Once the application is running:
 2. **Customize the data**: Modify the mock data in the backend to add your own content
 3. **Add real APIs**: Integrate with real weather APIs and Google OAuth
 4. **Database setup**: Configure a real database instead of using mock data
-5. **Deployment**: Deploy to production using services like Vercel, Heroku, or AWS
+5. **Deployment**: Deploy to production using the automated GitHub Actions and Cloud Build pipelines
 
 ## Contributing
 

@@ -16,10 +16,11 @@ export const useAccountingData = () => {
       setError(null);
       
       const response = await api.get('/ledger/entries');
-      setLedgerData(response.data);
+      setLedgerData(response.data || []);
     } catch (error) {
       console.error('Failed to fetch ledger data:', error);
       setError(`Error loading data from server: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setLedgerData([]); // Ensure ledgerData is always an array
     } finally {
       setLoading(false);
     }
