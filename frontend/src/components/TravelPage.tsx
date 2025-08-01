@@ -6,8 +6,7 @@ import {
   TravelMap,
   TravelEntry, 
   sampleTravelData, 
-  formatDateRange, 
-  calculateTripStats 
+  formatDateRange
 } from './travel';
 
 const TravelPage: React.FC = () => {
