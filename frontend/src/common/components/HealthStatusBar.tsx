@@ -102,8 +102,6 @@ const HealthStatusBar: React.FC = () => {
   }
 
   const isHealthy = healthStatus.status === 'healthy' && healthStatus.database.available;
-  const frontendEnv = getFrontendEnvironment();
-  const deploymentMethod = getDeploymentMethod();
   const EnvironmentIcon = getEnvironmentIcon();
   const DeploymentMethodIcon = getDeploymentMethodIcon();
 
