@@ -51,6 +51,9 @@ ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "https://bravocui.github.io,http:
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "bravocui-site")
 GCS_PREFIX = os.getenv("GCS_PREFIX", "dev/")
 
+# Google AI configuration
+MODEL_NAME_GENAI = os.getenv("MODEL_NAME_GENAI", "gemini-2.0-flash")
+
 # Debug: Print configuration (without sensitive data)
 print(f"🔧 Environment: {ENVIRONMENT}")
 print(f"🌐 Database URL: {DATABASE_URL.split('@')[0]}@***")  # Hide password

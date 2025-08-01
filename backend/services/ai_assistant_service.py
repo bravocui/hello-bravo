@@ -2,21 +2,22 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from database.db_models import SpendingCategory as DBSpendingCategory
 from pydantic import BaseModel
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import json
 import base64
 from PIL import Image
 import io
 import os
 from fastapi import HTTPException, UploadFile
+from config import MODEL_NAME_GENAI
 
 # Configure Google Generative AI
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-2.5-flash')
+    client = genai.Client(api_key=GOOGLE_API_KEY)
 else:
-    model = None
+    client = None
 
 class AIAssistantRequest(BaseModel):
     prompt: str
@@ -45,40 +46,7 @@ class AIAssistantService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-    @staticmethod
-    def process_images(images: List[UploadFile]) -> List[Dict[str, Any]]:
-        """Process uploaded images for AI analysis"""
-        image_parts = []
-        
-        if images and len(images) > 0:
-            for image_file in images:
-                if image_file.content_type.startswith('image/'):
-                    # Read and process the image
-                    image_data = image_file.file.read()
-                    image = Image.open(io.BytesIO(image_data))
-                    
-                    # Convert to RGB if necessary
-                    if image.mode != 'RGB':
-                        image = image.convert('RGB')
-                    
-                    # Resize if too large (Gemini has size limits)
-                    max_size = 1024
-                    if max(image.size) > max_size:
-                        ratio = max_size / max(image.size)
-                        new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
-                        image = image.resize(new_size, Image.Resampling.LANCZOS)
-                    
-                    # Convert back to bytes
-                    img_byte_arr = io.BytesIO()
-                    image.save(img_byte_arr, format='JPEG', quality=85)
-                    img_byte_arr = img_byte_arr.getvalue()
-                    
-                    image_parts.append({
-                        "mime_type": "image/jpeg",
-                        "data": img_byte_arr
-                    })
-        
-        return image_parts
+
 
     @staticmethod
     def create_system_prompt(category_names: List[str]) -> str:
@@ -132,7 +100,7 @@ class AIAssistantService:
     def process_expense_with_ai(db: Session, prompt: str, images: List[UploadFile] = None) -> AIAssistantResponse:
         """Process text and images to extract expense information using AI"""
         
-        if not model:
+        if not client:
             raise HTTPException(
                 status_code=500, 
                 detail="AI service not configured. Please set GOOGLE_API_KEY environment variable."
@@ -148,16 +116,42 @@ class AIAssistantService:
             # Combine system prompt with user prompt
             full_prompt = f"{system_prompt}\n\nUser input: {prompt}"
             
-            # Process images if provided
-            image_parts = []
-            if images:
-                image_parts = AIAssistantService.process_images(images)
+            # Prepare contents for AI
+            contents = [full_prompt]
             
-            # Generate response from AI
-            if image_parts:
-                response = model.generate_content([full_prompt, *image_parts])
-            else:
-                response = model.generate_content(full_prompt)
+            # Add images if provided
+            if images:
+                for image_file in images:
+                    if image_file.content_type.startswith('image/'):
+                        # Read and process the image
+                        image_data = image_file.file.read()
+                        image = Image.open(io.BytesIO(image_data))
+                        
+                        # Convert to RGB if necessary
+                        if image.mode != 'RGB':
+                            image = image.convert('RGB')
+                        
+                        # Resize if too large (Gemini has size limits)
+                        max_size = 1024
+                        if max(image.size) > max_size:
+                            ratio = max_size / max(image.size)
+                            new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                            image = image.resize(new_size, Image.Resampling.LANCZOS)
+                        
+                        contents.append(image)
+            
+            # Generate response from AI with system instruction
+            response = client.models.generate_content(
+                model=MODEL_NAME_GENAI,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=2000,
+                    temperature=0.3,
+                    top_p=0.8,
+                    top_k=20,
+                )
+            )
             
             # Extract the response text
             response_text = response.text.strip()
@@ -239,7 +233,7 @@ class AIAssistantService:
     def get_health_status() -> Dict[str, Any]:
         """Get AI assistant health status"""
         return {
-            "status": "healthy" if model else "unconfigured",
-            "model_available": model is not None,
+            "status": "healthy" if client else "unconfigured",
+            "model_available": client is not None,
             "api_key_configured": GOOGLE_API_KEY is not None
         } 
