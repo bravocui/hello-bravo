@@ -156,7 +156,7 @@ const AppContent: React.FC = () => {
           } 
         />
         <Route 
-          path="/accounting" 
+          path="/ledger" 
           element={
             <GuestRoute>
               <AccountingPage />

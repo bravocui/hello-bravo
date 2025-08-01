@@ -124,7 +124,7 @@ const AccountingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        title="Expense Tracker"
+        title="Ledger"
         icon={DollarSign}
         iconColor="accounting"
         showBackButton={true}

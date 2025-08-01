@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, Monitor, Server, GitBranch, Clock, Hash } from 'lucide-react';
+import { CheckCircle, AlertCircle, Monitor, Server, Database, Wrench, Globe, Hand, GitBranch } from 'lucide-react';
 import { healthApi } from '../../config/api';
 
 interface HealthStatus {
@@ -21,12 +21,27 @@ const HealthStatusBar: React.FC = () => {
   // Get frontend environment
   const getFrontendEnvironment = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'development';
+      return 'dev';
     }
-    if (window.location.hostname.includes('github.io')) {
-      return 'production';
-    }
-    return 'production'; // Default to production
+    return 'prod';
+  };
+
+  // Get environment icon
+  const getEnvironmentIcon = () => {
+    const env = getFrontendEnvironment();
+    return env === 'dev' ? Wrench : Globe;
+  };
+
+  // Get deployment method
+  const getDeploymentMethod = () => {
+    const deploymentMethod = process.env.REACT_APP_DEPLOYMENT_METHOD || 'manual';
+    return deploymentMethod === 'github-actions' ? 'git' : 'manual';
+  };
+
+  // Get deployment method icon
+  const getDeploymentMethodIcon = () => {
+    const method = getDeploymentMethod();
+    return method === 'git' ? GitBranch : Hand;
   };
 
   useEffect(() => {
@@ -88,53 +103,9 @@ const HealthStatusBar: React.FC = () => {
 
   const isHealthy = healthStatus.status === 'healthy' && healthStatus.database.available;
   const frontendEnv = getFrontendEnvironment();
-  const backendEnv = healthStatus.environment || 'production';
-
-  // Deployment status logic
-  const deploymentMethod = process.env.REACT_APP_DEPLOYMENT_METHOD || 'unknown';
-  const deploymentTime = process.env.REACT_APP_DEPLOYMENT_TIME;
-  const commitSha = process.env.REACT_APP_COMMIT_SHA;
-
-  const getDeploymentInfo = () => {
-    switch (deploymentMethod) {
-      case 'github-actions':
-        return {
-          method: 'GitHub Actions',
-          icon: GitBranch,
-          color: 'text-green-600'
-        };
-      case 'manual':
-        return {
-          method: 'Manual Deploy',
-          icon: GitBranch,
-          color: 'text-blue-600'
-        };
-      default:
-        return {
-          method: 'Unknown',
-          icon: GitBranch,
-          color: 'text-gray-600'
-        };
-    }
-  };
-
-  const info = getDeploymentInfo();
-  const Icon = info.icon;
-
-  const formatTime = (timestamp: string) => {
-    if (!timestamp) return null;
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleString();
-    } catch {
-      return null;
-    }
-  };
-
-  const formatCommitSha = (sha: string) => {
-    if (!sha) return null;
-    return sha.substring(0, 7);
-  };
+  const deploymentMethod = getDeploymentMethod();
+  const EnvironmentIcon = getEnvironmentIcon();
+  const DeploymentMethodIcon = getDeploymentMethodIcon();
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 border-t px-4 py-2 text-xs ${
@@ -143,41 +114,31 @@ const HealthStatusBar: React.FC = () => {
         : 'bg-red-50 border-red-200 text-red-600'
     }`}>
       <div className="flex items-center justify-center space-x-2">
-        {isHealthy ? (
-          <CheckCircle className="w-3 h-3" />
-        ) : (
-          <AlertCircle className="w-3 h-3" />
-        )}
         <span className="flex items-center space-x-1">
-          {/* Frontend Group */}
+          {/* Frontend */}
           <Monitor className="w-3 h-3" />
-          <span>Frontend: {frontendEnv}</span>
-          {deploymentTime && (
-            <>
-              <span>|</span>
-              <Clock className="w-3 h-3" />
-              <span>{formatTime(deploymentTime)}</span>
-            </>
-          )}
-          {commitSha && (
-            <>
-              <span>|</span>
-              <Hash className="w-3 h-3" />
-              <span>{formatCommitSha(commitSha)}</span>
-            </>
-          )}
-          <Icon className={`w-3 h-3 ${info.color}`} />
-          <span className={info.color}>{info.method}</span>
+          <EnvironmentIcon className="w-3 h-3" />
+          <DeploymentMethodIcon className="w-3 h-3" />
           
           <span>|</span>
           
-          {/* Backend Group */}
+          {/* Backend */}
           <Server className="w-3 h-3" />
-          <span>Backend: {backendEnv}</span>
+          {isHealthy ? (
+            <CheckCircle className="w-3 h-3" />
+          ) : (
+            <AlertCircle className="w-3 h-3" />
+          )}
+          
           <span>|</span>
-          <span>DB: {healthStatus.database.available ? 'Connected' : 'Disconnected'}</span>
-          <span>|</span>
-          <span>v{healthStatus.timestamp}</span>
+          
+          {/* Database */}
+          <Database className="w-3 h-3" />
+          {healthStatus.database.available ? (
+            <CheckCircle className="w-3 h-3" />
+          ) : (
+            <AlertCircle className="w-3 h-3" />
+          )}
         </span>
       </div>
     </div>

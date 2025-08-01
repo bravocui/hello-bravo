@@ -41,11 +41,11 @@ const Dashboard: React.FC = () => {
     },
     {
       id: 'accounting',
-      title: 'Accounting',
+      title: 'Ledger',
       description: 'Track your expenses',
       icon: DollarSign,
       color: 'accounting',
-      path: '/accounting',
+      path: '/ledger',
       stats: 'Expense tracking',
       restrictedForGuests: true, // Hide for guests
     },
