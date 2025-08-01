@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import api from '../../../config/api';
-import { LedgerEntry, DataSource } from '../types';
+import { LedgerEntry } from '../types';
 
 export const useAccountingActions = (
   ledgerData: LedgerEntry[],
@@ -181,22 +181,7 @@ export const useAccountingActions = (
     }
   };
 
-  const createLedgerEntry = async (entry: any) => {
-    try {
-      const response = await api.post('/ledger/entries', {
-        year: entry.year,
-        month: entry.month,
-        user_id: entry.user_id,
-        credit_card: entry.credit_card,
-        category: entry.category,
-        amount: entry.amount,
-        notes: entry.notes
-      });
-      return response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.detail || 'Failed to create entry');
-    }
-  };
+
 
   return {
     editingEntry,

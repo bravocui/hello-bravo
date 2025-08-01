@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { LedgerEntry, TimeRange, DataSource, SelectedView, FilterValue, UserFilterValue } from '../types';
+import { LedgerEntry, SelectedView, FilterValue, UserFilterValue } from '../types';
 
 export const useAccountingFilters = (ledgerData: LedgerEntry[]) => {
   const [selectedUsers, setSelectedUsers] = useState<UserFilterValue>([]);

@@ -6,7 +6,6 @@ import {
   TravelMap,
   TravelEntry, 
   sampleTravelData, 
-  formatDate, 
   formatDateRange, 
   calculateTripStats 
 } from './travel';
@@ -92,7 +91,7 @@ const TravelPage: React.FC = () => {
     );
   }
 
-  const { totalTrips, totalDays, avgRating } = calculateTripStats(travelData);
+  const tripStats = calculateTripStats(travelData);
 
   return (
     <div className="min-h-screen bg-gray-50">
