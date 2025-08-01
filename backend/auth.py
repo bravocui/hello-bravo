@@ -242,7 +242,8 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             # For production: cross-domain cookies
             cookie_kwargs.update({
                 "samesite": "none",     # Allow cross-site cookies
-                "domain": ".us-central1.run.app",  # Set explicit domain for cross-subdomain
+                # Don't set domain - let browser handle it automatically
+                # This allows cookies to work across different domains
             })
         else:
             # For development: local cookies
@@ -286,8 +287,8 @@ async def logout(response: Response):
     if ENVIRONMENT == "production":
         cookie_kwargs.update({
             "secure": True,
-            "samesite": "none",
-            "domain": None
+            "samesite": "none"
+            # Don't set domain - let browser handle it automatically
         })
     
     response.delete_cookie(**cookie_kwargs)

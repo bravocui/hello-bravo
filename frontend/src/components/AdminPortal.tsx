@@ -164,14 +164,116 @@ const AdminPortal: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) {
-      return;
-    }
+    const userToDelete = users.find(user => user.id === userId);
+    if (!userToDelete) return;
+
+    // Create a custom confirmation dialog
+    const confirmed = await new Promise<boolean>((resolve) => {
+      const dialog = document.createElement('div');
+      dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      dialog.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div class="flex items-center mb-4">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+              <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Delete User</h3>
+          </div>
+          
+          <div class="mb-4">
+            <p class="text-sm text-gray-600 mb-3">
+              <strong>Warning:</strong> Deleting this user will permanently remove their account and may cause data disruption.
+            </p>
+            <p class="text-sm text-gray-600 mb-3">
+              This action will affect:
+            </p>
+            <ul class="text-sm text-gray-600 list-disc list-inside mb-3">
+              <li>All user data and preferences</li>
+              <li>Associated credit cards and transactions</li>
+              <li>Spending records and categories</li>
+              <li>Any other linked data</li>
+            </ul>
+            <p class="text-sm text-gray-600 mb-4">
+              To confirm deletion, please type the user's email address: <strong>${userToDelete.email}</strong>
+            </p>
+            <input 
+              type="email" 
+              id="confirm-email" 
+              placeholder="Enter email to confirm"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+            />
+          </div>
+          
+          <div class="flex justify-end space-x-3">
+            <button 
+              id="cancel-delete" 
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              id="confirm-delete" 
+              class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled
+            >
+              Delete User
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(dialog);
+      
+      const confirmButton = dialog.querySelector('#confirm-delete') as HTMLButtonElement;
+      const cancelButton = dialog.querySelector('#cancel-delete') as HTMLButtonElement;
+      const emailInput = dialog.querySelector('#confirm-email') as HTMLInputElement;
+      
+      const checkEmail = () => {
+        const isMatch = emailInput.value.trim().toLowerCase() === userToDelete.email.toLowerCase();
+        confirmButton.disabled = !isMatch;
+        if (isMatch) {
+          confirmButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+          confirmButton.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+      };
+      
+      emailInput.addEventListener('input', checkEmail);
+      
+      confirmButton.addEventListener('click', () => {
+        if (emailInput.value.trim().toLowerCase() === userToDelete.email.toLowerCase()) {
+          document.body.removeChild(dialog);
+          resolve(true);
+        }
+      });
+      
+      cancelButton.addEventListener('click', () => {
+        document.body.removeChild(dialog);
+        resolve(false);
+      });
+      
+      // Close on backdrop click
+      dialog.addEventListener('click', (e) => {
+        if (e.target === dialog) {
+          document.body.removeChild(dialog);
+          resolve(false);
+        }
+      });
+      
+      // Focus on email input
+      emailInput.focus();
+    });
+
+    if (!confirmed) return;
     
     try {
       await api.delete(`/users/admin/${userId}`);
       setUsers(users.filter(user => user.id !== userId));
       setError(null);
+      setSuccessMessage(`User "${userToDelete.name}" deleted successfully!`);
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to delete user';
       

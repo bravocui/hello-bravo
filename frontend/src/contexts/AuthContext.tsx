@@ -112,6 +112,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Function to check cookie status
+  const checkCookieStatus = () => {
+    try {
+      const cookies = document.cookie.split(';');
+      const sessionCookie = cookies.find(cookie => 
+        cookie.trim().startsWith('session_token=')
+      );
+      
+      if (sessionCookie) {
+        console.log('🍪 Session cookie found:', sessionCookie.substring(0, 50) + '...');
+      } else {
+        console.log('🍪 No session cookie found');
+      }
+    } catch (error) {
+      console.warn('Failed to check cookie status:', error);
+    }
+  };
+
   useEffect(() => {
     // Only check auth once on mount
     if (hasCheckedAuth) return;
@@ -121,28 +139,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // First check database status
         await checkDatabaseStatus();
         
-        // Try to load token from localStorage first
-        const { token: storedToken, userData: storedUser } = loadTokenFromStorage();
+        // Check cookie status for debugging
+        checkCookieStatus();
         
-        if (storedToken && storedUser) {
-          // Set the token in the header and state
-          setAuthToken(storedToken);
-          setAuthHeader(storedToken);
-          setUser(storedUser);
-          console.log('🔑 Restored authentication from localStorage');
-        }
-        
-        // Always verify with the server to ensure token is still valid
+        // Always verify with the server first (this will use cookies)
         const response = await api.get('/user/profile');
         const serverUser = response.data;
         
         // Update with fresh user data from server
         setUser(serverUser);
         
-        // If we had a stored token but server user is different, update storage
-        if (storedToken && (!storedUser || storedUser.email !== serverUser.email)) {
-          saveTokenToStorage(storedToken, serverUser);
+        // Also try to load token from localStorage as backup
+        const { token: storedToken, userData: storedUser } = loadTokenFromStorage();
+        
+        if (storedToken && storedUser) {
+          // Set the token in the header for API calls
+          setAuthToken(storedToken);
+          setAuthHeader(storedToken);
+          console.log('🔑 Using localStorage token as backup for API calls');
         }
+        
+        console.log('✅ Authentication verified with server');
         
       } catch (error) {
         console.log('❌ Authentication check failed, clearing stored data');
@@ -170,13 +187,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await api.post('/auth/google', { token, stay_logged_in: stayLoggedIn });
       const { user: userData, token: authToken } = response.data;
       
-      // Save to state and localStorage
+      // Save to state
       setUser(userData);
       setAuthToken(authToken);
       setAuthHeader(authToken);
+      
+      // Also save to localStorage as backup
       saveTokenToStorage(authToken, userData);
       
-      console.log('🔑 Login successful, token stored');
+      console.log('🔑 Login successful, cookie and localStorage token stored');
+      console.log(`🍪 Cookie will expire in ${stayLoggedIn ? '7 days' : '1 hour'}`);
+      
+      // Check cookie status after login
+      setTimeout(() => {
+        checkCookieStatus();
+      }, 1000);
     } catch (error) {
       setUser(null);
       setAuthToken(null);
