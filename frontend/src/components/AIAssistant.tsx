@@ -23,7 +23,7 @@ interface AIAssistantProps {
   currentUser?: string;
   currentCreditCard?: string;
   users: Array<{id: number, name: string, email: string}>;
-  creditCards: Array<{id: number, name: string, owner: string}>;
+  creditCards: Array<{id: number, name: string, user_id: number, user?: {name: string}}>;
 }
 
 const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, currentUser, currentCreditCard = '', users, creditCards }) => {
@@ -389,17 +389,16 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Owner <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      User <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={selectedUser}
                       onChange={(e) => setSelectedUser(e.target.value)}
-                      className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        !selectedUser ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     >
-                      <option value="">Select Owner</option>
+                      <option value="">Select User</option>
                       {users.map(user => (
                         <option key={user.id} value={user.name}>
                           {user.name}

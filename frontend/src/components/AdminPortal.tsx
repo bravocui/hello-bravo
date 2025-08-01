@@ -17,10 +17,14 @@ interface CreditCardData {
   id: number;
   user_id: number;
   name: string;
-  owner: string;
   opening_time: string;
   created_at: string;
   updated_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 interface SpendingCategory {
@@ -43,13 +47,13 @@ interface EditUserForm {
 
 interface CreateCreditCardForm {
   name: string;
-  owner: string;
+  user_id: number;
   opening_time: string;
 }
 
 interface EditCreditCardForm {
   name: string;
-  owner: string;
+  user_id: number;
   opening_time: string;
 }
 
@@ -85,12 +89,12 @@ const AdminPortal: React.FC = () => {
   const [editingCreditCard, setEditingCreditCard] = useState<number | null>(null);
   const [createCreditCardForm, setCreateCreditCardForm] = useState<CreateCreditCardForm>({
     name: '',
-    owner: '',
+    user_id: 0,
     opening_time: new Date().toISOString().slice(0, 10)
   });
   const [editCreditCardForm, setEditCreditCardForm] = useState<EditCreditCardForm>({
     name: '',
-    owner: '',
+    user_id: 0,
     opening_time: ''
   });
 
@@ -312,7 +316,7 @@ const AdminPortal: React.FC = () => {
     try {
       const response = await api.post('/credit-cards/', createCreditCardForm);
       setCreditCards([response.data, ...creditCards]);
-      setCreateCreditCardForm({ name: '', owner: '', opening_time: new Date().toISOString().slice(0, 10) });
+      setCreateCreditCardForm({ name: '', user_id: 0, opening_time: new Date().toISOString().slice(0, 10) });
       setShowCreateCreditCardForm(false);
       setError(null);
     } catch (err: any) {
@@ -419,14 +423,14 @@ const AdminPortal: React.FC = () => {
     setEditingCreditCard(card.id);
     setEditCreditCardForm({
       name: card.name,
-      owner: card.owner,
+      user_id: card.user_id,
       opening_time: new Date(card.opening_time).toISOString().slice(0, 10)
     });
   };
 
   const cancelEditingCreditCard = () => {
     setEditingCreditCard(null);
-    setEditCreditCardForm({ name: '', owner: '', opening_time: '' });
+    setEditCreditCardForm({ name: '', user_id: 0, opening_time: '' });
   };
 
   const startEditingSpendingCategory = (category: SpendingCategory) => {
@@ -750,14 +754,14 @@ const AdminPortal: React.FC = () => {
                       required
                     />
                     <select
-                      value={createCreditCardForm.owner}
-                      onChange={(e) => setCreateCreditCardForm({...createCreditCardForm, owner: e.target.value})}
+                      value={createCreditCardForm.user_id}
+                      onChange={(e) => setCreateCreditCardForm({...createCreditCardForm, user_id: parseInt(e.target.value, 10)})}
                       className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       required
                     >
-                      <option value="">Select Owner</option>
+                      <option value="">Select User</option>
                       {users.map((user) => (
-                        <option key={user.id} value={user.name}>
+                        <option key={user.id} value={user.id}>
                           {user.name} ({user.email})
                         </option>
                       ))}
@@ -797,7 +801,7 @@ const AdminPortal: React.FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Owner</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opening Time</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
@@ -820,19 +824,19 @@ const AdminPortal: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {editingCreditCard === card.id ? (
                           <select
-                            value={editCreditCardForm.owner}
-                            onChange={(e) => setEditCreditCardForm({...editCreditCardForm, owner: e.target.value})}
+                            value={editCreditCardForm.user_id}
+                            onChange={(e) => setEditCreditCardForm({...editCreditCardForm, user_id: parseInt(e.target.value, 10)})}
                             className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                           >
-                            <option value="">Select Owner</option>
+                            <option value="">Select User</option>
                             {users.map((user) => (
-                              <option key={user.id} value={user.name}>
+                              <option key={user.id} value={user.id}>
                                 {user.name} ({user.email})
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <div className="text-sm text-gray-900">{card.owner}</div>
+                          <div className="text-sm text-gray-900">{card.user?.name}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

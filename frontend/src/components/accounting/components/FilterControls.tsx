@@ -16,7 +16,7 @@ interface FilterControlsProps {
   uniqueYears: number[];
   uniqueMonths: number[];
   filteredData: LedgerEntry[];
-  creditCards: Array<{id: number, name: string, owner: string}>;
+  creditCards: Array<{id: number, name: string, user_id: number, user?: {name: string}}>;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -68,7 +68,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   const availableCreditCards = React.useMemo(() => {
     // Show credit cards for selected users
     return creditCards
-      .filter(card => selectedUsers.includes(card.owner))
+      .filter(card => selectedUsers.includes(card.user?.name || ''))
       .map(card => card.name)
       .sort();
   }, [selectedUsers, creditCards]);
@@ -77,7 +77,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   React.useEffect(() => {
     if (selectedUsers.length > 0 && selectedCreditCard !== 'all') {
       const userCards = creditCards
-        .filter(card => selectedUsers.includes(card.owner))
+        .filter(card => selectedUsers.includes(card.user?.name || ''))
         .map(card => card.name);
       
       if (!userCards.includes(selectedCreditCard as string)) {

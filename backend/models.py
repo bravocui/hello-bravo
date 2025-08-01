@@ -73,14 +73,13 @@ class CreditCard(BaseModel):
     id: Optional[int] = None
     user_id: int
     name: str
-    owner: str
     opening_time: datetime
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
 class CreateCreditCardRequest(BaseModel):
     name: str
-    owner: str
+    user_id: int
     opening_time: str  # Accept date string like "2019-06-13"
     
     def __init__(self, **data):
@@ -92,7 +91,7 @@ class CreateCreditCardRequest(BaseModel):
 
 class UpdateCreditCardRequest(BaseModel):
     name: str
-    owner: str
+    user_id: int
     opening_time: str  # Accept date string like "2019-06-13"
     
     def __init__(self, **data):

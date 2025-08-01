@@ -44,7 +44,7 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
 
   // Helper function to get credit cards for a specific user
   const getCreditCardsForUser = (userName: string) => {
-    return creditCards.filter(card => card.owner === userName);
+    return creditCards.filter(card => card.user?.name === userName);
   };
 
   // Helper function to get all category names

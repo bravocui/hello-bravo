@@ -18,7 +18,12 @@ export interface User {
 export interface CreditCard {
   id: number;
   name: string;
-  owner: string;
+  user_id: number;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 export interface SpendingCategory {

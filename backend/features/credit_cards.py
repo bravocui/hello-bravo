@@ -22,18 +22,26 @@ async def get_credit_cards(
                 DBCreditCard.user_id == current_user.id
             ).all()
         
-        # Convert to Pydantic models for response
+        # Convert to Pydantic models for response with user information
         cards = []
         for card in credit_cards:
-            cards.append(CreditCard(
-                id=card.id,
-                user_id=card.user_id,
-                name=card.name,
-                owner=card.owner,
-                opening_time=card.opening_time,
-                created_at=card.created_at,
-                updated_at=card.updated_at
-            ))
+            # Get user information
+            user = db.query(DBUser).filter(DBUser.id == card.user_id).first()
+            user_info = {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email
+            } if user else None
+            
+            cards.append({
+                "id": card.id,
+                "user_id": card.user_id,
+                "name": card.name,
+                "opening_time": card.opening_time,
+                "created_at": card.created_at,
+                "updated_at": card.updated_at,
+                "user": user_info
+            })
         
         return cards
     except Exception as e:
@@ -47,16 +55,15 @@ async def create_credit_card(
 ):
     """Create a new credit card"""
     try:
-        # Find the user by name (owner)
-        db_user = db.query(DBUser).filter(DBUser.name == card.owner).first()
+        # Verify the user exists
+        db_user = db.query(DBUser).filter(DBUser.id == card.user_id).first()
         if not db_user:
-            raise HTTPException(status_code=400, detail=f"User '{card.owner}' not found")
+            raise HTTPException(status_code=400, detail=f"User with ID {card.user_id} not found")
         
         # Create new database entry
         db_card = DBCreditCard(
-            user_id=db_user.id,
+            user_id=card.user_id,
             name=card.name,
-            owner=card.owner,
             opening_time=card.opening_time
         )
         
@@ -65,15 +72,22 @@ async def create_credit_card(
         db.refresh(db_card)
         
         # Return the created card
-        return CreditCard(
-            id=db_card.id,
-            user_id=db_card.user_id,
-            name=db_card.name,
-            owner=db_card.owner,
-            opening_time=db_card.opening_time,
-            created_at=db_card.created_at,
-            updated_at=db_card.updated_at
-        )
+        user = db.query(DBUser).filter(DBUser.id == db_card.user_id).first()
+        user_info = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        } if user else None
+        
+        return {
+            "id": db_card.id,
+            "user_id": db_card.user_id,
+            "name": db_card.name,
+            "opening_time": db_card.opening_time,
+            "created_at": db_card.created_at,
+            "updated_at": db_card.updated_at,
+            "user": user_info
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -99,15 +113,23 @@ async def get_credit_card(
         if not card:
             raise HTTPException(status_code=404, detail="Credit card not found")
         
-        return CreditCard(
-            id=card.id,
-            user_id=card.user_id,
-            name=card.name,
-            owner=card.owner,
-            opening_time=card.opening_time,
-            created_at=card.created_at,
-            updated_at=card.updated_at
-        )
+        # Get user information
+        user = db.query(DBUser).filter(DBUser.id == card.user_id).first()
+        user_info = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        } if user else None
+        
+        return {
+            "id": card.id,
+            "user_id": card.user_id,
+            "name": card.name,
+            "opening_time": card.opening_time,
+            "created_at": card.created_at,
+            "updated_at": card.updated_at,
+            "user": user_info
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -137,16 +159,15 @@ async def update_credit_card(
         # Store the old card name for updating ledger entries
         old_card_name = db_card.name
         
-        # Find the user by name (owner) if owner is being changed
-        if card_update.owner != db_card.owner:
-            db_user = db.query(DBUser).filter(DBUser.name == card_update.owner).first()
+        # Verify the new user exists if user_id is being changed
+        if card_update.user_id != db_card.user_id:
+            db_user = db.query(DBUser).filter(DBUser.id == card_update.user_id).first()
             if not db_user:
-                raise HTTPException(status_code=400, detail=f"User '{card_update.owner}' not found")
-            db_card.user_id = db_user.id
+                raise HTTPException(status_code=400, detail=f"User with ID {card_update.user_id} not found")
         
         # Update the card
         db_card.name = card_update.name
-        db_card.owner = card_update.owner
+        db_card.user_id = card_update.user_id
         db_card.opening_time = card_update.opening_time
         
         # Update all related ledger entries if card name changed
@@ -166,16 +187,24 @@ async def update_credit_card(
         db.commit()
         db.refresh(db_card)
         
+        # Get user information
+        user = db.query(DBUser).filter(DBUser.id == db_card.user_id).first()
+        user_info = {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email
+        } if user else None
+        
         return {
-            "card": CreditCard(
-                id=db_card.id,
-                user_id=db_card.user_id,
-                name=db_card.name,
-                owner=db_card.owner,
-                opening_time=db_card.opening_time,
-                created_at=db_card.created_at,
-                updated_at=db_card.updated_at
-            ),
+            "card": {
+                "id": db_card.id,
+                "user_id": db_card.user_id,
+                "name": db_card.name,
+                "opening_time": db_card.opening_time,
+                "created_at": db_card.created_at,
+                "updated_at": db_card.updated_at,
+                "user": user_info
+            },
             "message": f"Credit card updated successfully. {updated_count} ledger entries were also updated." if updated_count > 0 else "Credit card updated successfully."
         }
     except HTTPException:

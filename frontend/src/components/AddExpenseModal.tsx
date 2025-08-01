@@ -15,7 +15,7 @@ interface AddExpenseModalProps {
   onConfirmEntries: (entries: any[]) => Promise<number>;
   onClose: () => void;
   users: Array<{id: number, name: string, email: string}>;
-  creditCards: Array<{id: number, name: string, owner: string}>;
+  creditCards: Array<{id: number, name: string, user_id: number, user?: {name: string}}>;
   spendingCategories: Array<{id: number, category_name: string}>;
 }
 
@@ -74,7 +74,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   };
 
   const getCreditCardsForUser = (userName: string) => {
-    return creditCards.filter(card => card.owner === userName);
+    return creditCards.filter(card => card.user?.name === userName);
   };
 
   const getCategoryNames = () => {

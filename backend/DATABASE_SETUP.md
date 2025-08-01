@@ -34,7 +34,7 @@ We've successfully integrated CloudSQL (PostgreSQL) with the backend and built a
    - `id` (Primary Key)
    - `user_id` (Foreign Key to users)
    - `year`, `month`, `category`, `amount`
-   - `credit_card`, `owner`, `notes`
+   - `credit_card`, `user_name`, `notes`
    - `created_at`, `updated_at`
 
 ## 🔧 Files Created/Modified

@@ -196,17 +196,12 @@ class UserService:
         # If name changed, update all related entries
         if name_changed:
             try:
-                from db_models import LedgerEntry, CreditCard
+                from db_models import LedgerEntry
                 
                 # Update ledger entries
                 ledger_entries = db.query(LedgerEntry).filter(LedgerEntry.user_name == old_name).all()
                 for entry in ledger_entries:
                     entry.user_name = user_data["name"]
-                
-                # Update credit cards (owner field)
-                credit_cards = db.query(CreditCard).filter(CreditCard.owner == old_name).all()
-                for card in credit_cards:
-                    card.owner = user_data["name"]
                 
             except Exception as e:
                 db.rollback()
