@@ -1,6 +1,6 @@
 {
   "name": "personal-life-tracking-frontend",
-  "version": "0.2.2 - Leaflet Map",
+  "version": "0.2.3",
   "private": true,
   "homepage": "https://bravocui.github.io/hello-bravo/",
   "dependencies": {

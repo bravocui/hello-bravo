@@ -6,7 +6,7 @@ import Dashboard from './features/dashboard/Dashboard';
 import FitnessPage from './features/fitness/FitnessPage';
 import TravelPage from './features/travel/TravelPage';
 import WeatherPage from './features/weather/WeatherPage';
-import AccountingPage from './features/accounting/AccountingPage';
+import LedgerPage from './features/ledger/LedgerPage';
 import AdminPortal from './features/admin/AdminPortal';
 import HealthStatusBar from './common/components/HealthStatusBar';
 import './index.css';
@@ -159,7 +159,7 @@ const AppContent: React.FC = () => {
           path="/ledger" 
           element={
             <GuestRoute>
-              <AccountingPage />
+              <LedgerPage />
             </GuestRoute>
           } 
         />

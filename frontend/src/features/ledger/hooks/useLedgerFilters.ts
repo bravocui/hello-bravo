@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { LedgerEntry, SelectedView, FilterValue, UserFilterValue } from '../types';
 
-export const useAccountingFilters = (ledgerData: LedgerEntry[]) => {
+export const useLedgerFilters = (ledgerData: LedgerEntry[]) => {
   const [selectedUsers, setSelectedUsers] = useState<UserFilterValue>([]);
   const [selectedCreditCard, setSelectedCreditCard] = useState<FilterValue>('all');
   const [selectedYear, setSelectedYear] = useState<FilterValue>('all');

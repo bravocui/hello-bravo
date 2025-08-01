@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../../../config/api';
 import { LedgerEntry } from '../types';
 
-export const useAccountingActions = (
+export const useLedgerActions = (
   ledgerData: LedgerEntry[],
   setLedgerData: React.Dispatch<React.SetStateAction<LedgerEntry[]>>,
   setError: React.Dispatch<React.SetStateAction<string | null>>

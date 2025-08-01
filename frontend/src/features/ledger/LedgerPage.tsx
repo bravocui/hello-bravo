@@ -3,9 +3,9 @@ import { DollarSign } from 'lucide-react';
 import Header from '../../common/components/Header';
 import AIAssistant from '../../common/components/AIAssistant';
 import AddExpenseModal from '../../common/components/AddExpenseModal';
-import { useAccountingData } from './hooks/useAccountingData';
-import { useAccountingFilters } from './hooks/useAccountingFilters';
-import { useAccountingActions } from './hooks/useAccountingActions';
+import { useLedgerData } from './hooks/useLedgerData';
+import { useLedgerFilters } from './hooks/useLedgerFilters';
+import { useLedgerActions } from './hooks/useLedgerActions';
 import FilterControls from './FilterControls';
 import ExpenseSummary from './ExpenseSummary';
 import MonthlyTrendChart from './MonthlyTrendChart';
@@ -14,7 +14,7 @@ import CreditCardDetails from './CreditCardDetails';
 import DetailedDataTable from './DetailedDataTable';
 import { useAuth } from '../../contexts/AuthContext';
 
-const AccountingPage: React.FC = () => {
+const LedgerPage: React.FC = () => {
   const { user } = useAuth();
   const {
     ledgerData,
@@ -26,7 +26,7 @@ const AccountingPage: React.FC = () => {
     users,
     creditCards,
     spendingCategories
-  } = useAccountingData();
+  } = useLedgerData();
 
   const {
     selectedUsers,
@@ -43,7 +43,7 @@ const AccountingPage: React.FC = () => {
     uniqueCreditCards,
     uniqueYears,
     uniqueMonths
-  } = useAccountingFilters(ledgerData);
+  } = useLedgerFilters(ledgerData);
 
   const {
     editingEntry,
@@ -62,7 +62,7 @@ const AccountingPage: React.FC = () => {
     startEditing,
     cancelEditing,
     startAdding
-  } = useAccountingActions(ledgerData, setLedgerData, setError);
+  } = useLedgerActions(ledgerData, setLedgerData, setError);
 
   // Filter data based on all filters
   const filteredData = useMemo(() => {
@@ -258,4 +258,4 @@ const AccountingPage: React.FC = () => {
   );
 };
 
-export default AccountingPage; 
+export default LedgerPage; 

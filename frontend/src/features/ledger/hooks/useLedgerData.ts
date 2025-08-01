@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../../config/api';
 import { LedgerEntry, User, CreditCard, SpendingCategory } from '../types';
 
-export const useAccountingData = () => {
+export const useLedgerData = () => {
   const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
