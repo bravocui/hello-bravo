@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
-import Header from '../Header';
-import AIAssistant from '../AIAssistant';
-import AddExpenseModal from '../AddExpenseModal';
+import Header from '../../common/components/Header';
+import AIAssistant from '../../common/components/AIAssistant';
+import AddExpenseModal from '../../common/components/AddExpenseModal';
 import { useAccountingData } from './hooks/useAccountingData';
 import { useAccountingFilters } from './hooks/useAccountingFilters';
 import { useAccountingActions } from './hooks/useAccountingActions';
-import FilterControls from './components/FilterControls';
-import ExpenseSummary from './components/ExpenseSummary';
-import MonthlyTrendChart from './components/MonthlyTrendChart';
-import CategoryDetails from './components/CategoryDetails';
-import CreditCardDetails from './components/CreditCardDetails';
-import DetailedDataTable from './components/DetailedDataTable';
+import FilterControls from './FilterControls';
+import ExpenseSummary from './ExpenseSummary';
+import MonthlyTrendChart from './MonthlyTrendChart';
+import CategoryDetails from './CategoryDetails';
+import CreditCardDetails from './CreditCardDetails';
+import DetailedDataTable from './DetailedDataTable';
 import { useAuth } from '../../contexts/AuthContext';
 
 const AccountingPage: React.FC = () => {
@@ -128,6 +128,8 @@ const AccountingPage: React.FC = () => {
         icon={DollarSign}
         iconColor="accounting"
         showBackButton={true}
+        showUserInfo={true}
+        showLogout={true}
       />
 
       {/* Main Content */}

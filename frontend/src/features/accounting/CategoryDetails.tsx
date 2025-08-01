@@ -1,9 +1,9 @@
 import React from 'react';
 import { PieChart as PieChartIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LedgerEntry } from '../types';
-import { formatCurrency } from '../utils/formatters';
-import { getCategoryIcon, getCategoryColor } from '../utils/categoryUtils';
+import { LedgerEntry } from './types';
+import { formatCurrency } from './utils/formatters';
+import { getCategoryIcon, getCategoryColor } from './utils/categoryUtils';
 
 interface CategoryDetailsProps {
   filteredData: LedgerEntry[];

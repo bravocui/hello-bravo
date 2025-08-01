@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { BarChart3, ArrowUpDown, Bot, Plus, Edit, Save, X, Trash2 } from 'lucide-react';
-import { LedgerEntry, User, CreditCard, SpendingCategory, TableSortField } from '../types';
-import { formatCurrency } from '../utils/formatters';
-import { getCategoryIcon } from '../utils/categoryUtils';
+import { LedgerEntry, User, CreditCard, SpendingCategory, TableSortField } from './types';
+import { formatCurrency } from './utils/formatters';
+import { getCategoryIcon } from './utils/categoryUtils';
 
 interface DetailedDataTableProps {
   filteredData: LedgerEntry[];

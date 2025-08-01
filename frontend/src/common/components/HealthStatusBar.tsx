@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Monitor, Server, GitBranch, Clock, Hash } from 'lucide-react';
-import { healthApi } from '../config/api';
+import { healthApi } from '../../config/api';
 
 interface HealthStatus {
   status: string;

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
 import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { LedgerEntry, SelectedView, SortBy, SortOrder } from '../types';
-import { formatCurrency } from '../utils/formatters';
-import { getCategoryColor } from '../utils/categoryUtils';
+import { LedgerEntry, SelectedView, SortBy, SortOrder } from './types';
+import { formatCurrency } from './utils/formatters';
+import { getCategoryColor } from './utils/categoryUtils';
 
 interface ExpenseSummaryProps {
   totalExpenses: number;

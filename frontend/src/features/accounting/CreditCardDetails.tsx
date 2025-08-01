@@ -1,9 +1,9 @@
 import React from 'react';
 import { CreditCard } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LedgerEntry } from '../types';
-import { formatCurrency } from '../utils/formatters';
-import { getUserCardColor } from '../utils/categoryUtils';
+import { LedgerEntry } from './types';
+import { formatCurrency } from './utils/formatters';
+import { getUserCardColor } from './utils/categoryUtils';
 
 interface CreditCardDetailsProps {
   filteredData: LedgerEntry[];

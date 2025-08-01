@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Plus, Calendar, Clock, Flame } from 'lucide-react';
-import api from '../config/api';
-import Header from './Header';
+import api from '../../config/api';
+import Header from '../../common/components/Header';
 
 interface FitnessEntry {
   id: number;
@@ -97,6 +97,8 @@ const FitnessPage: React.FC = () => {
         icon={Activity}
         iconColor="fitness"
         showBackButton={true}
+        showUserInfo={true}
+        showLogout={true}
       />
 
       {/* Main Content */}

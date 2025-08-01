@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Upload, X, Save, Trash2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import api from '../config/api';
+import api from '../../config/api';
 
 interface ExpenseEntry {
   category: string;

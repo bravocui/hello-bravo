@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, Users } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { getVersionString } from '../config/version';
+import { useAuth } from '../../contexts/AuthContext';
+import { getVersionString } from '../../config/version';
 
 interface HeaderProps {
   title: string;

@@ -1,15 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import FitnessPage from './components/FitnessPage';
-import TravelPage from './components/TravelPage';
-import WeatherPage from './components/WeatherPage';
-import AccountingPage from './components/accounting/AccountingPage';
-import AdminPortal from './components/AdminPortal';
-import HealthStatusBar from './components/HealthStatusBar';
-import SimpleTest from './SimpleTest';
+import Login from './common/components/Login';
+import Dashboard from './features/dashboard/Dashboard';
+import FitnessPage from './features/fitness/FitnessPage';
+import TravelPage from './features/travel/TravelPage';
+import WeatherPage from './features/weather/WeatherPage';
+import AccountingPage from './features/accounting/AccountingPage';
+import AdminPortal from './features/admin/AdminPortal';
+import HealthStatusBar from './common/components/HealthStatusBar';
 import './index.css';
 
 // Protected Route component
@@ -172,10 +171,7 @@ const AppContent: React.FC = () => {
             </AdminRoute>
           } 
         />
-        <Route 
-          path="/test" 
-          element={<SimpleTest />} 
-        />
+
       </Routes>
       <HealthStatusBar />
     </>

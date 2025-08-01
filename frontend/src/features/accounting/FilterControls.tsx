@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Calendar, CreditCard, CalendarDays } from 'lucide-react';
-import { LedgerEntry, FilterValue, UserFilterValue } from '../types';
+import { LedgerEntry, FilterValue, UserFilterValue } from './types';
 
 interface FilterControlsProps {
   selectedUsers: UserFilterValue;

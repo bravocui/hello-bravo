@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, Thermometer, Droplets, Wind, MapPin } from 'lucide-react';
-import api from '../config/api';
-import Header from './Header';
+import api from '../../config/api';
+import Header from '../../common/components/Header';
 
 interface WeatherData {
   location: string;
@@ -109,6 +109,8 @@ const WeatherPage: React.FC = () => {
         icon={Cloud}
         iconColor="weather"
         showBackButton={true}
+        showUserInfo={true}
+        showLogout={true}
       />
 
       {/* Main Content */}

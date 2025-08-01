@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Activity, MapPin, Cloud, DollarSign } from 'lucide-react';
-import Header from './Header';
+import Header from '../../common/components/Header';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();

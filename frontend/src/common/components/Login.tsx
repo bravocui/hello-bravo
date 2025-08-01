@@ -1,8 +1,8 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Activity, MapPin, Cloud, User } from 'lucide-react';
-import { getVersionString } from '../config/version';
+import { getVersionString } from '../../config/version';
 
 declare global {
   interface Window {

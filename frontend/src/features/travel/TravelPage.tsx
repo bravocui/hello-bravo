@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, Calendar, Star, Image } from 'lucide-react';
-import api from '../config/api';
-import Header from './Header';
+import api from '../../config/api';
+import Header from '../../common/components/Header';
 import { 
   TravelMap,
   TravelEntry, 
   sampleTravelData, 
   formatDateRange
-} from './travel';
+} from './index';
 
 const TravelPage: React.FC = () => {
   const [travelData, setTravelData] = useState<TravelEntry[]>([]);
@@ -99,6 +99,8 @@ const TravelPage: React.FC = () => {
         icon={MapPin}
         iconColor="travel"
         showBackButton={true}
+        showUserInfo={true}
+        showLogout={true}
       />
 
       {/* Main Content */}

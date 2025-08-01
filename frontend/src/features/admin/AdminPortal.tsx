@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Save, X, User as UserIcon, Shield, Eye, CreditCard, Tag } from 'lucide-react';
-import Header from './Header';
-import api from '../config/api';
+import Header from '../../common/components/Header';
+import api from '../../config/api';
 
 interface User {
   id: number;

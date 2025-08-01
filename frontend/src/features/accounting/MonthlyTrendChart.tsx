@@ -1,8 +1,8 @@
 import React from 'react';
 import { BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
-import { LedgerEntry } from '../types';
-import { formatCurrency, formatMonthYear } from '../utils/formatters';
+import { LedgerEntry } from './types';
+import { formatCurrency, formatMonthYear } from './utils/formatters';
 
 interface MonthlyTrendChartProps {
   filteredData: LedgerEntry[];
