@@ -149,18 +149,9 @@ const HealthStatusBar: React.FC = () => {
           <AlertCircle className="w-3 h-3" />
         )}
         <span className="flex items-center space-x-1">
+          {/* Frontend Group */}
           <Monitor className="w-3 h-3" />
           <span>Frontend: {frontendEnv}</span>
-          <span>|</span>
-          <Server className="w-3 h-3" />
-          <span>Backend: {backendEnv}</span>
-          <span>|</span>
-          <span>DB: {healthStatus.database.available ? 'Connected' : 'Disconnected'}</span>
-          <span>|</span>
-          <span>v{healthStatus.timestamp}</span>
-          <span>|</span>
-          <Icon className={`w-3 h-3 ${info.color}`} />
-          <span className={info.color}>{info.method}</span>
           {deploymentTime && (
             <>
               <span>|</span>
@@ -175,6 +166,18 @@ const HealthStatusBar: React.FC = () => {
               <span>{formatCommitSha(commitSha)}</span>
             </>
           )}
+          <Icon className={`w-3 h-3 ${info.color}`} />
+          <span className={info.color}>{info.method}</span>
+          
+          <span>|</span>
+          
+          {/* Backend Group */}
+          <Server className="w-3 h-3" />
+          <span>Backend: {backendEnv}</span>
+          <span>|</span>
+          <span>DB: {healthStatus.database.available ? 'Connected' : 'Disconnected'}</span>
+          <span>|</span>
+          <span>v{healthStatus.timestamp}</span>
         </span>
       </div>
     </div>
