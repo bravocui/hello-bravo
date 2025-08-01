@@ -68,12 +68,10 @@ async def verify_google_token(id_token: str):
 
 def create_jwt(user: dict, expiration_minutes: int = None):
     """Create JWT token for user"""
-    print(f"🔍 Creating JWT for user: {user}")
     # Use provided expiration or default to shorter session
     expire_minutes = expiration_minutes or JWT_DEFAULT_EXPIRE_MINUTES
     expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
     to_encode = {"sub": user["email"], "exp": expire, "user": user}
-    print(f"🔍 JWT payload: {to_encode}")
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 async def get_current_user(
@@ -82,32 +80,18 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Get current user from JWT cookie or Authorization header"""
-    print(f"🔐 Authentication Debug:")
-    print(f"   Session token present: {session_token is not None}")
-    print(f"   Authorization header present: {authorization is not None}")
-    print(f"   Session token length: {len(session_token) if session_token else 0}")
-    print(f"   Session token preview: {session_token[:50] if session_token else 'None'}...")
-    
     # Try to get token from cookie first, then from Authorization header
     token = session_token
     if not token and authorization:
         if authorization.startswith("Bearer "):
             token = authorization[7:]  # Remove "Bearer " prefix
-            print(f"   Using Authorization header token")
     
     if not token:
-        print("❌ No session token found in cookies or Authorization header")
-        print("🔍 This usually means:")
-        print("   1. Cookies are not being sent by the browser")
-        print("   2. SameSite policy is blocking the cookie")
-        print("   3. Cookie domain/path is incorrect")
-        print("   4. Authorization header not set")
         raise HTTPException(status_code=401, detail="Not authenticated (no token)")
     
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_data = payload["user"]
-        print(f"✅ JWT decoded successfully for user: {user_data.get('email', 'Unknown')}")
         
         # Check if this is a guest user
         is_guest = (user_data.get('email', '').startswith('guest-') or 
@@ -115,7 +99,6 @@ async def get_current_user(
                    user_data.get('id') == 0)
         
         if is_guest:
-            print(f"🎭 Guest user detected: {user_data.get('email', 'Unknown')}")
             # Return guest user without database lookup
             return User(
                 id=0,
@@ -131,7 +114,6 @@ async def get_current_user(
             if not db_user:
                 print(f"❌ User not found in database: {user_data.get('email', 'Unknown')}")
                 raise HTTPException(status_code=401, detail="User not found in database")
-            print(f"✅ User found in database: {db_user.email}")
         except Exception as db_error:
             # Check if it's a connection error
             error_str = str(db_error).lower()
@@ -221,8 +203,6 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             "role": str(user_data["role"])
         }
         
-        print(f"🔍 JWT user data: {jwt_user_data}")
-        
         # Determine expiration based on stay_logged_in preference
         expiration_minutes = JWT_STAY_LOGGED_IN_EXPIRE_MINUTES if stay_logged_in else JWT_DEFAULT_EXPIRE_MINUTES
         jwt_token = create_jwt(jwt_user_data, expiration_minutes)
@@ -252,13 +232,6 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
             })
         
         response.set_cookie(**cookie_kwargs)
-        print(f"🍪 Cookie set successfully:")
-        print(f"   Key: {JWT_COOKIE_NAME}")
-        print(f"   Path: {cookie_kwargs.get('path', 'Not set')}")
-        print(f"   SameSite: {cookie_kwargs.get('samesite', 'Not set')}")
-        print(f"   Secure: {cookie_kwargs.get('secure', 'Not set')}")
-        print(f"   HttpOnly: {cookie_kwargs.get('httponly', 'Not set')}")
-        print(f"   Max Age: {cookie_kwargs.get('max_age', 'Not set')}")
         return {
             "user": jwt_user_data,
             "token": jwt_token  # Include token for frontend storage

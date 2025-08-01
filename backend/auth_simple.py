@@ -68,13 +68,6 @@ async def google_auth_simple(token: dict, response: Response, stay_logged_in: bo
             })
         
         response.set_cookie(**cookie_kwargs)
-        print(f"🍪 Cookie set successfully (simple auth):")
-        print(f"   Key: {JWT_COOKIE_NAME}")
-        print(f"   Path: {cookie_kwargs.get('path', 'Not set')}")
-        print(f"   SameSite: {cookie_kwargs.get('samesite', 'Not set')}")
-        print(f"   Secure: {cookie_kwargs.get('secure', 'Not set')}")
-        print(f"   HttpOnly: {cookie_kwargs.get('httponly', 'Not set')}")
-        print(f"   Max Age: {cookie_kwargs.get('max_age', 'Not set')}")
         return {"user": jwt_user_data}
         
     except Exception as e:
