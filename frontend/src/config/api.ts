@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Get API URL from environment variable, fallback to localhost for development
-const API_URL = process.env.REACT_APP_API_URL || 'https://hello-bravo-api-772654378329.us-central1.run.app';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 // Create axios instance with base configuration
 const api = axios.create({

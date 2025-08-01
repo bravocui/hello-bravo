@@ -11,42 +11,37 @@ This playbook covers updating the frontend (GitHub Pages), backend (Google Cloud
 
 ---
 
-## 1. Frontend Production Deployment (GitHub Pages)
+## 1. Frontend Production Deployment (GitHub Actions)
 
 ### Pre-deployment Checklist
 - [ ] All changes committed to `main` branch
-- [ ] Environment variables set correctly in GitHub repository
+- [ ] Environment variables set as GitHub repository secrets
 - [ ] `REACT_APP_API_URL` points to production backend
 - [ ] `REACT_APP_BASENAME` set to `/hello-bravo` for GitHub Pages
 
 ### Deployment Steps
 
 ```bash
-# 1. Navigate to frontend directory
-cd frontend
-
-# 2. Install dependencies (if needed)
-npm install
-
-# 3. Build for production
-npm run build
-
-# 4. Deploy to production
-npm run deploy
-
-# 5. Commit and push changes
+# 1. Commit and push changes
 git add .
 git commit -m "Update frontend: [describe changes]"
 git push origin main
 
-# 6. Verify deployment
+# 2. GitHub Actions automatically builds and deploys
+# Check Actions tab in GitHub repository for deployment status
+
+# 3. Verify deployment
 # Wait 2-3 minutes, then check: https://bravocui.github.io/hello-bravo/
 ```
 
-### Environment Variables (GitHub Repository Settings)
-- `REACT_APP_API_URL`: `https://hello-bravo-api-772654378329.us-central1.run.app`
-- `REACT_APP_BASENAME`: `/hello-bravo`
-- `REACT_APP_GOOGLE_CLIENT_ID`: Your Google OAuth client ID
+### Environment Variables (GitHub Repository Secrets)
+Set these in GitHub repository Settings → Secrets and variables → Actions → Secrets:
+
+| Secret Name | Value |
+|-------------|-------|
+| `REACT_APP_API_URL` | `https://your-service-name-{PROJECT_ID}.us-central1.run.app` |
+| `REACT_APP_BASENAME` | `/hello-bravo` |
+| `REACT_APP_GOOGLE_CLIENT_ID` | `your-google-oauth-client-id.apps.googleusercontent.com` |
 
 ### Troubleshooting
 - **"You need to enable JavaScript"**: Check `REACT_APP_BASENAME` setting
@@ -55,48 +50,44 @@ git push origin main
 
 ---
 
-## 2. Backend Production Deployment (Google Cloud Run)
+## 2. Backend Production Deployment (Google Cloud Build)
 
 ### Pre-deployment Checklist
 - [ ] Backend code tested locally
-- [ ] Environment variables configured in Google Cloud Run
+- [ ] Environment variables configured in Google Cloud Run console
 - [ ] Google Cloud CLI authenticated
-- [ ] Docker image builds successfully
+- [ ] CloudBuild API enabled
 
-### Environment Variables (Google Cloud Run)
-```bash
-Update backend/.env file
+### Environment Variables (Google Cloud Run Console)
+Set these directly in the Google Cloud Run console under "Edit & Deploy New Revision" → "Variables & Secrets":
 
-- GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-- JWT_SECRET=your-secure-jwt-secret
-- ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
-
+```
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+JWT_SECRET=your-secure-jwt-secret
+ALLOWED_ORIGINS=https://bravocui.github.io,http://localhost:3000
+DATABASE_URL=your-database-connection-string
+GOOGLE_API_KEY=your-google-ai-api-key
 ```
 
 ### Deployment Steps
 
 ```bash
-# 1. Navigate to backend directory
-cd backend
+# 1. Navigate to project root
+cd /Users/bocui/Workspace/hello-bravo
 
-# 2. Build Docker image and tag
-docker build --platform linux/amd64 -t gcr.io/bravocui-site/hello-bravo-api .
+# 2. Deploy using CloudBuild
+gcloud builds submit --config cloudbuild-production.yaml
 
-# 3. Push to registry
-docker push gcr.io/bravocui-site/hello-bravo-api
-
-# 4. Deploy to Cloud Run
-gcloud run deploy hello-bravo-api \
-  --image gcr.io/bravocui-site/hello-bravo-api \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated
+# 3. Verify deployment
+# Check Cloud Run console or use health endpoint
+curl https://your-service-name-{PROJECT_ID}.us-central1.run.app/health
 ```
 
 ### Troubleshooting
-- **Build failures**: Check Dockerfile and requirements.txt
-- **Environment variables**: Verify all required vars are set in Cloud Run
+- **Build failures**: Check CloudBuild logs in Google Cloud Console
+- **Environment variables**: Verify all required vars are set in Cloud Run console
 - **CORS errors**: Check `ALLOWED_ORIGINS` includes your frontend URL
+- **Deployment failures**: Check CloudBuild API is enabled and authenticated
 
 ---
 
@@ -163,9 +154,9 @@ REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ### For Major Updates
 ```bash
 # 1. Update backend first
-cd backend
+cd /Users/bocui/Workspace/hello-bravo
 # Make changes, test locally
-gcloud run deploy hello-bravo-api --source . --platform managed --region us-central1
+gcloud builds submit --config cloudbuild-production.yaml
 
 # 2. Update frontend
 cd frontend
@@ -185,8 +176,8 @@ npm run build
 git add . && git commit -m "Quick fix" && git push
 
 # Backend only (if frontend unchanged)
-cd backend
-gcloud run deploy hello-bravo-api --source . --platform managed --region us-central1
+cd /Users/bocui/Workspace/hello-bravo
+gcloud builds submit --config cloudbuild-production.yaml
 ```
 
 ---

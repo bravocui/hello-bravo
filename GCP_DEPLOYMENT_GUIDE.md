@@ -29,23 +29,30 @@ gcloud services enable run.googleapis.com
 gcloud services enable containerregistry.googleapis.com
 ```
 
-## 🐳 Option 1: Build and Push Docker Image Only
+## 🐳 Option 1: Manual Docker Build and Push
 
-Use this if you just want to build and push the Docker image to Google Container Registry:
+Use this if you want to manually build and push the Docker image to Google Container Registry:
 
 ```bash
-# Make the script executable
-chmod +x build-and-push-docker.sh
+# Navigate to backend directory
+cd backend
 
-# Run the script
-./build-and-push-docker.sh
+# Configure Docker authentication
+gcloud auth configure-docker
+
+# Build the image
+docker build -t gcr.io/YOUR_PROJECT_ID/hello-bravo-api .
+
+# Push to Google Container Registry
+docker push gcr.io/YOUR_PROJECT_ID/hello-bravo-api
+
+cd ..
 ```
 
 This will:
-- ✅ Check prerequisites (gcloud, authentication, project)
-- 🔨 Build the Docker image
+- ✅ Build the Docker image locally
 - 📤 Push to Google Container Registry
-- 📝 Show next steps
+- 📝 Manual deployment needed
 
 ## 🚀 Option 2: Full Deployment to Cloud Run
 
