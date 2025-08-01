@@ -91,7 +91,7 @@ const TravelPage: React.FC = () => {
     );
   }
 
-  const tripStats = calculateTripStats(travelData);
+
 
   return (
     <div className="min-h-screen bg-gray-50">
