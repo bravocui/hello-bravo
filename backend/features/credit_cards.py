@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-from models import User, CreditCard, CreateCreditCardRequest, UpdateCreditCardRequest
+from database.models import User, CreditCard, CreateCreditCardRequest, UpdateCreditCardRequest
 from auth import get_current_user
-from database import get_db
-from db_models import CreditCard as DBCreditCard, User as DBUser
+from database.database import get_db
+from database.db_models import CreditCard as DBCreditCard, User as DBUser
 
 router = APIRouter(prefix="/credit-cards", tags=["credit-cards"])
 
@@ -169,7 +169,7 @@ async def update_credit_card(
         # Update all related ledger entries if card name changed
         updated_count = 0
         if old_card_name != card_update.name:
-            from db_models import LedgerEntry as DBLedgerEntry
+            from database.db_models import LedgerEntry as DBLedgerEntry
             
             # Use a single UPDATE query instead of iterating
             result = db.query(DBLedgerEntry).filter(
@@ -231,7 +231,7 @@ async def delete_credit_card(
             raise HTTPException(status_code=404, detail="Credit card not found")
         
         # Check for related ledger entries
-        from db_models import LedgerEntry as DBLedgerEntry
+        from database.db_models import LedgerEntry as DBLedgerEntry
         related_entries = db.query(DBLedgerEntry).filter(
             DBLedgerEntry.credit_card == db_card.name
         ).count()

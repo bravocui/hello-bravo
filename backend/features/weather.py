@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from models import WeatherData
+from database.models import WeatherData
 
 
 router = APIRouter(prefix="/weather", tags=["weather"])

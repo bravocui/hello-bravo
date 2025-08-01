@@ -9,10 +9,10 @@ from datetime import datetime
 from config import ALLOWED_ORIGINS, ENVIRONMENT
 
 # Import models and auth
-from models import User
+from database.models import User
 from auth import get_current_user, google_auth, logout, get_user_profile
 from auth_simple import google_auth_simple, logout_simple
-from database import get_db
+from database.database import get_db
 
 # Import feature routers
 from features.fitness import router as fitness_router
@@ -34,7 +34,7 @@ database_available = False
 async def test_database_connection():
     global database_available
     try:
-        from database import engine
+        from database.database import engine
         from sqlalchemy import text
         from config import DATABASE_URL
         
@@ -186,7 +186,7 @@ async def health_check():
     # Only do a full database check if we haven't established connection yet
     if not database_available:
         try:
-            from database import engine
+            from database.database import engine
             from sqlalchemy import text
             
             # Use existing engine from database module
@@ -215,7 +215,7 @@ async def health_check():
 async def get_pool_status():
     """Get database connection pool status for debugging"""
     try:
-        from database import get_pool_status
+        from database.database import get_pool_status
         pool_info = get_pool_status()
         
         return {

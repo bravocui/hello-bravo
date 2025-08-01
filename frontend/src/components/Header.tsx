@@ -61,7 +61,7 @@ const Header: React.FC<HeaderProps> = ({
               {/* Admin Portal Button */}
               {user?.role === 'ADMIN' && (
                 <button
-                  onClick={() => navigate('/user-management')}
+                  onClick={() => navigate('/admin-portal')}
                   className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"
                   title="Admin Portal"
                 >

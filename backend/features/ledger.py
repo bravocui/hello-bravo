@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-from models import User, LedgerEntry, CreateLedgerEntryRequest, UpdateLedgerEntryRequest
+from database.models import User, LedgerEntry, CreateLedgerEntryRequest, UpdateLedgerEntryRequest
 from auth import get_current_user
-from database import get_db
-from db_models import LedgerEntry as DBLedgerEntry, User as DBUser
+from database.database import get_db
+from database.db_models import LedgerEntry as DBLedgerEntry, User as DBUser
 
 from pydantic import BaseModel
 

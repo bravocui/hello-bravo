@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from models import User
+from database.models import User
 from auth import get_current_user
-from database import get_db
-from db_models import SpendingCategory as DBSpendingCategory
+from database.database import get_db
+from database.db_models import SpendingCategory as DBSpendingCategory
 from pydantic import BaseModel
 import google.generativeai as genai
 import json

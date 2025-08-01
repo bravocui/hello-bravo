@@ -5,7 +5,7 @@ from sqlalchemy.pool import QueuePool
 
 # Import centralized configuration
 from config import DATABASE_URL
-from database_config import get_pool_config, print_config
+from database.database_config import get_pool_config, print_config
 
 # Get pool configuration
 pool_config = get_pool_config()

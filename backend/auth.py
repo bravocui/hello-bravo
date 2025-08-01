@@ -8,10 +8,10 @@ from cryptography.hazmat.backends import default_backend
 import base64
 import os
 from sqlalchemy.orm import Session
-from models import User
-from db_models import UserRole
+from database.models import User
+from database.db_models import UserRole
 
-from database import get_db
+from database.database import get_db
 from services.user_service import UserService
 
 # Import centralized configuration

@@ -10,11 +10,12 @@ def load_environment():
     
     # Load environment file if it exists
     if environment == "production":
-        env_file = ".env.production"
+        env_file = ".env.prod"
     elif environment == "development":
-        env_file = ".env.development"
+        env_file = ".env.dev"
     else:
-        env_file = ".env"
+        # Fail fast if environment is not recognized
+        raise ValueError(f"❌ Unrecognized environment: '{environment}'. Must be 'development' or 'production'")
     
     # Try to load the environment file
     if os.path.exists(env_file):

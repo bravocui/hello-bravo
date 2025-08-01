@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from models import User, TravelEntry
+from database.models import User, TravelEntry
 from auth import get_current_user
 
 

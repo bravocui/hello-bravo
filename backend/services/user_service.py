@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from db_models import User, UserRole
-from models import User as UserSchema
+from database.db_models import User, UserRole
+from database.models import User as UserSchema
 from typing import Optional, List
 import json
 from config import DATABASE_URL
@@ -209,7 +209,7 @@ class UserService:
         
         try:
             # Check for related data
-            from db_models import LedgerEntry, CreditCard, FitnessEntry, TravelEntry
+            from database.db_models import LedgerEntry, CreditCard, FitnessEntry, TravelEntry
             
             # Count related data
             credit_cards_count = db.query(CreditCard).filter(CreditCard.user_id == user_id).count()

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from models import User, SpendingCategory, CreateSpendingCategoryRequest, UpdateSpendingCategoryRequest
+from database.models import User, SpendingCategory, CreateSpendingCategoryRequest, UpdateSpendingCategoryRequest
 from auth import get_current_user
-from database import get_db
-from db_models import SpendingCategory as DBSpendingCategory
+from database.database import get_db
+from database.db_models import SpendingCategory as DBSpendingCategory
 
 router = APIRouter(prefix="/spending-categories", tags=["spending-categories"])
 
@@ -129,7 +129,7 @@ async def update_spending_category(
         db_category.category_name = new_category_name
         
         # Update all related ledger entries efficiently
-        from db_models import LedgerEntry as DBLedgerEntry
+        from database.db_models import LedgerEntry as DBLedgerEntry
         
         # Use a single UPDATE query instead of iterating
         result = db.query(DBLedgerEntry).filter(
@@ -176,7 +176,7 @@ async def delete_spending_category(
             raise HTTPException(status_code=404, detail="Spending category not found")
         
         # Check for related ledger entries
-        from db_models import LedgerEntry as DBLedgerEntry
+        from database.db_models import LedgerEntry as DBLedgerEntry
         related_entries = db.query(DBLedgerEntry).filter(
             DBLedgerEntry.category == db_category.category_name
         ).count()

@@ -165,7 +165,7 @@ const AppContent: React.FC = () => {
           } 
         />
         <Route 
-          path="/user-management" 
+          path="/admin-portal" 
           element={
             <AdminRoute>
               <AdminPortal />
