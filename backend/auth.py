@@ -205,12 +205,6 @@ async def google_auth(token: dict, response: Response, db: Session = Depends(get
         
         # Determine expiration based on stay_logged_in preference
         expiration_minutes = JWT_STAY_LOGGED_IN_EXPIRE_MINUTES if stay_logged_in else JWT_DEFAULT_EXPIRE_MINUTES
-        
-        # Debug logging
-        print(f"🔑 Login request - stay_logged_in: {stay_logged_in}")
-        print(f"⏰ JWT expiration: {expiration_minutes} minutes ({expiration_minutes/60:.1f} hours)")
-        print(f"📅 Cookie max_age: {expiration_minutes * 60} seconds")
-        
         jwt_token = create_jwt(jwt_user_data, expiration_minutes)
         
         # Configure cookie settings based on environment
