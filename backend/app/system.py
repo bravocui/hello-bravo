@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, Response, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from database.models import User
 from auth import get_current_user, google_auth, logout, get_user_profile
 from auth_simple import google_auth_simple, logout_simple
@@ -8,17 +9,22 @@ from app.startup import get_database_status
 from config import ENVIRONMENT
 from datetime import datetime
 
+# Request model for Google auth
+class GoogleAuthRequest(BaseModel):
+    token: str
+    stay_logged_in: bool = False
+
 router = APIRouter(tags=["core"])
 
 # Auth endpoints
 @router.post("/auth/google")
-async def auth_google(token: dict, response: Response, db = Depends(get_db), stay_logged_in: bool = False):
+async def auth_google(request: GoogleAuthRequest, response: Response, db = Depends(get_db)):
     """Google OAuth authentication endpoint"""
     database_available = get_database_status()
     if database_available:
-        return await google_auth(token, response, db, stay_logged_in)
+        return await google_auth({"token": request.token}, response, db, request.stay_logged_in)
     else:
-        return await google_auth_simple(token, response, stay_logged_in)
+        return await google_auth_simple({"token": request.token}, response, request.stay_logged_in)
 
 @router.post("/logout")
 async def auth_logout(response: Response):
