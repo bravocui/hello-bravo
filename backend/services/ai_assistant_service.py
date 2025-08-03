@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from database.db_models import SpendingCategory as DBSpendingCategory
@@ -11,13 +13,22 @@ import io
 import os
 from fastapi import HTTPException, UploadFile
 from config import MODEL_NAME_GENAI
+from google.adk.agents import Agent
+from google.adk.sessions import InMemorySessionService
+from google.adk.runners import Runner
+from google.genai.types import Blob, Content, Part
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configure Google Generative AI
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if GOOGLE_API_KEY:
-    client = genai.Client(api_key=GOOGLE_API_KEY)
+if not GOOGLE_API_KEY:
+    logger.error("GOOGLE_API_KEY environment variable is required for ADK")
+    raise ValueError("GOOGLE_API_KEY environment variable is required for ADK")
 else:
-    client = None
+    logger.info("✅ Google API key configured successfully")
 
 class AIAssistantRequest(BaseModel):
     prompt: str
@@ -37,161 +48,301 @@ class AIAssistantResponse(BaseModel):
     full_prompt: str
 
 class AIAssistantService:
-    @staticmethod
-    def get_available_categories(db: Session) -> List[str]:
+    def __init__(self):
+        """Initialize the ADK service with session management"""
+        logger.info("🚀 Initializing AI Assistant Service with ADK")
+        self.session_service = InMemorySessionService()
+        self.app_name = "ledger_app"
+        self.agent = None
+        self.runner = None
+        logger.info("✅ AI Assistant Service initialized")
+    
+    def _get_available_categories(self, db: Session) -> List[str]:
         """Get available spending categories from database"""
+        logger.info("📊 Fetching available spending categories from database")
         try:
             categories = db.query(DBSpendingCategory).all()
-            return [cat.category_name for cat in categories]
+            category_names = [cat.category_name for cat in categories]
+            logger.info(f"✅ Found {len(category_names)} categories: {category_names}")
+            return category_names
         except Exception as e:
+            logger.error(f"❌ Database error while fetching categories: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
-
-
-    @staticmethod
-    def create_system_prompt(category_names: List[str]) -> str:
+    def _create_system_prompt(self, category_names: List[str]) -> str:
         """Create the system prompt for AI processing"""
-        return f"""
-        You are an AI assistant that extracts expense information from credit card statements and receipts.
-        
-        IMPORTANT: You must use ONLY these exact category names from the database:
-        {', '.join(category_names)}
-        
-        If an expense doesn't match any of these categories, categorize it as "Others".
-        
-        Analyze the provided text and images to identify expense entries. For each expense found, extract:
-        - Category (MUST be one of the exact categories listed above, or "Others" if no match)
-        - Amount (as a number)
-        - Year and month if mentioned in the text/image
-        - Notes explaining how the amount was calculated from the user input
+        logger.info("📝 Creating system prompt with categories")
+        prompt = f"""
+You are a JSON-only expense processor. You MUST respond with ONLY a valid JSON array.
 
-        Aggregate the "Others" category into one entry. In the notes field, explain how you calculated
-        the amount from the input.
-        
-        Return your response as a valid JSON array with this exact structure:
-        [
-            {{
-                "category": "string (must be one of the exact categories listed above)",
-                "amount": number,
-                "year": number (optional),
-                "month": number (optional, 1-12),
-                "notes": "string explaining how this amount was calculated from the input"
-            }}
-        ]
-        
-        Guidelines:
-        - If no year/month is mentioned, omit those fields
-        - Categories MUST be exact matches from the provided list, or "Others"
-        - Amounts can be positive or negative numbers (negative for credits/refunds)
-        - Include both expenses (positive) and credits/refunds (negative)
-        - In the notes field, explain how you calculated the amount from the input
-        - If you're unsure about any field, omit it rather than guess
-        - Sum up multiple small expenses into single entries when appropriate
-        - Notes should be short, but concise and to the point
+Available categories: {', '.join(category_names)}
 
-        Example Notes:
-        - Bad note: Extracted from the 'Shopping' row in the provided spending breakdown.
-        - Bad note: Calculated by summing 'Personal' ($13.42) and 'Home' ($11.67) expenses, as these categories are not in the allowed list.
-        - Good note: From 'Shopping' row.
-        - Good note: Sum: 'Personal' ($13.42) + 'Home' ($11.67) = $25.09.
+Extract expense information and return ONLY this JSON format:
+[
+    {{
+        "category": "exact_category_name",
+        "amount": number,
+        "year": number (optional),
+        "month": number (optional),
+        "notes": "brief explanation"
+    }}
+]
+
+Rules:
+- Use ONLY the exact category names listed above
+- If no match, use "Others"
+- Respond with ONLY the JSON array - no other text
+- No explanations, no conversation, no markdown
+- Just the raw JSON array
+
+Example input: "I spent $25 on lunch today"
+Example output: [{{"category": "Food", "amount": 25, "notes": "Lunch expense"}}]
+
+Remember: ONLY JSON, nothing else.
         """
+        logger.info("✅ System prompt created successfully")
+        logger.debug(f"📋 System prompt: {prompt}")
+        return prompt
 
-    @staticmethod
-    def process_expense_with_ai(db: Session, prompt: str, images: List[UploadFile] = None) -> AIAssistantResponse:
-        """Process text and images to extract expense information using AI"""
+    def _initialize_agent_and_runner(self, db: Session):
+        """Initialize the ADK agent and runner with database context"""
+        logger.info("🤖 Initializing ADK agent and runner")
+        category_names = self._get_available_categories(db)
+        system_prompt = self._create_system_prompt(category_names)
         
-        if not client:
-            raise HTTPException(
-                status_code=500, 
-                detail="AI service not configured. Please set GOOGLE_API_KEY environment variable."
-            )
+        # Create the agent
+        self.agent = Agent(
+            name="ExpenseProcessor",
+            model=MODEL_NAME_GENAI,
+            description="Agent to extract and process expense information from text and images",
+            instruction=system_prompt
+        )
+        
+        # Create the runner
+        self.runner = Runner(
+            agent=self.agent,
+            app_name=self.app_name,
+            session_service=self.session_service
+        )
+        
+        logger.info(f"✅ ADK Agent initialized: {self.agent.name} using model {self.agent.model}")
+        logger.info(f"✅ ADK Runner initialized with app_name: {self.app_name}")
+
+    def _process_image(self, image_file: UploadFile) -> Part:
+        """Process an uploaded image file and return a Part for ADK"""
+        logger.info(f"🖼️ Processing image: {image_file.filename} ({image_file.content_type})")
+        
+        if not image_file.content_type.startswith('image/'):
+            logger.error(f"❌ Invalid file type: {image_file.content_type}")
+            raise HTTPException(status_code=400, detail=f"Invalid file type: {image_file.content_type}")
         
         try:
-            # Fetch available categories from database
-            category_names = AIAssistantService.get_available_categories(db)
+            # Read and process the image
+            image_data = image_file.file.read()
+            image = Image.open(io.BytesIO(image_data))
+            logger.info(f"📏 Original image size: {image.size}")
             
-            # Prepare the prompt for the AI
-            system_prompt = AIAssistantService.create_system_prompt(category_names)
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                logger.info(f"🔄 Converting image from {image.mode} to RGB")
+                image = image.convert('RGB')
             
-            # Combine system prompt with user prompt
-            full_prompt = f"{system_prompt}\n\nUser input: {prompt}"
+            # Resize if too large (Gemini has size limits)
+            max_size = 1024
+            if max(image.size) > max_size:
+                ratio = max_size / max(image.size)
+                new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+                logger.info(f"📐 Resized image to: {new_size}")
             
-            # Prepare contents for AI
-            contents = [full_prompt]
+            # Save the processed image back to bytes
+            processed_image_bytes = io.BytesIO()
+            image.save(processed_image_bytes, format='JPEG')
+            processed_image_bytes.seek(0)
+            
+            # Create a Blob and Part for the processed image
+            image_blob = Blob(data=processed_image_bytes.getvalue(), mime_type='image/jpeg')
+            image_part = Part.from_blob(image_blob)
+            logger.info("✅ Image processed successfully")
+            return image_part
+            
+        except Exception as e:
+            logger.error(f"❌ Error processing image: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
+
+    async def process_expense_with_ai(self, db: Session, prompt: str, images: List[UploadFile] = None, user_id: str = "default_user", session_id: str = "default_session") -> AIAssistantResponse:
+        """Process text and images to extract expense information using ADK"""
+        logger.info(f"🔄 Starting expense processing for user {user_id}, session {session_id}")
+        logger.info(f"📝 Prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+        logger.info(f"🖼️ Number of images: {len(images) if images else 0}")
+        
+        try:
+            # Initialize agent and runner if not already done
+            if not self.agent or not self.runner:
+                logger.info("🤖 Agent or runner not initialized, creating new agent and runner")
+                self._initialize_agent_and_runner(db)
+            else:
+                logger.info("✅ Using existing agent and runner")
+            
+            # Create session before using runner
+            logger.info(f"📋 Creating session for user {user_id}, session {session_id}")
+            try:
+                await self.session_service.create_session(
+                    app_name=self.app_name,
+                    user_id=user_id,
+                    session_id=session_id
+                )
+                logger.info("✅ Session created successfully")
+            except Exception as e:
+                logger.info(f"📋 Session might already exist: {str(e)}")
+            
+            # Prepare message parts
+            logger.info("📦 Preparing message parts")
+            message_parts = [Part(text=prompt)]
             
             # Add images if provided
             if images:
-                for image_file in images:
-                    if image_file.content_type.startswith('image/'):
-                        # Read and process the image
-                        image_data = image_file.file.read()
-                        image = Image.open(io.BytesIO(image_data))
-                        
-                        # Convert to RGB if necessary
-                        if image.mode != 'RGB':
-                            image = image.convert('RGB')
-                        
-                        # Resize if too large (Gemini has size limits)
-                        max_size = 1024
-                        if max(image.size) > max_size:
-                            ratio = max_size / max(image.size)
-                            new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
-                            image = image.resize(new_size, Image.Resampling.LANCZOS)
-                        
-                        contents.append(image)
+                logger.info(f"🖼️ Processing {len(images)} images")
+                for i, image_file in enumerate(images):
+                    logger.info(f"🖼️ Processing image {i+1}/{len(images)}: {image_file.filename}")
+                    image_part = self._process_image(image_file)
+                    message_parts.append(image_part)
             
-            # Generate response from AI with system instruction
-            response = client.models.generate_content(
-                model=MODEL_NAME_GENAI,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    max_output_tokens=2000,
-                    temperature=0.3,
-                    top_p=0.8,
-                    top_k=20,
+            # Create the user message
+            user_message = Content(parts=message_parts)
+            logger.info(f"📨 Created user message with {len(message_parts)} parts")
+            
+            # Use the runner to process the message (runner handles sessions internally)
+            logger.info("🤖 Using ADK runner to process message")
+            try:
+                response_events = self.runner.run(
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=user_message
                 )
-            )
-            
-            # Extract the response text
-            response_text = response.text.strip()
+                
+                # Extract response from events
+                response_text = ""
+                all_events = []
+                
+                logger.info("📨 Processing response events")
+                for event in response_events:
+                    all_events.append(event)
+                    logger.info(f"📨 Received event: {type(event).__name__}")
+                    
+                    # Try to extract text from the event
+                    if hasattr(event, 'content') and event.content:
+                        if hasattr(event.content, 'parts') and event.content.parts:
+                            # Extract text from Content object
+                            text_parts = []
+                            for part in event.content.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    text_parts.append(part.text)
+                            response_text = ' '.join(text_parts).strip()
+                            logger.info(f"✅ Found content in event: {response_text[:100]}...")
+                            break
+                        else:
+                            response_text = str(event.content).strip()
+                            logger.info(f"✅ Found content in event: {response_text[:100]}...")
+                            break
+                    elif hasattr(event, 'text') and event.text:
+                        response_text = event.text.strip()
+                        logger.info(f"✅ Found text in event: {response_text[:100]}...")
+                        break
+                    elif hasattr(event, 'message') and event.message:
+                        if hasattr(event.message, 'content') and event.message.content:
+                            if hasattr(event.message.content, 'parts') and event.message.content.parts:
+                                # Extract text from Content object
+                                text_parts = []
+                                for part in event.message.content.parts:
+                                    if hasattr(part, 'text') and part.text:
+                                        text_parts.append(part.text)
+                                response_text = ' '.join(text_parts).strip()
+                                logger.info(f"✅ Found message content: {response_text[:100]}...")
+                                break
+                            else:
+                                response_text = str(event.message.content).strip()
+                                logger.info(f"✅ Found message content: {response_text[:100]}...")
+                                break
+                        elif hasattr(event.message, 'text') and event.message.text:
+                            response_text = event.message.text.strip()
+                            logger.info(f"✅ Found message text: {response_text[:100]}...")
+                            break
+                
+                logger.info(f"📊 Collected {len(all_events)} events from runner")
+                
+                # If no response text found, try to extract from all events
+                if not response_text and all_events:
+                    logger.info("🔍 No direct response found, analyzing all events")
+                    for i, event in enumerate(all_events):
+                        logger.info(f"📋 Event {i}: {type(event).__name__} - {str(event)[:100]}...")
+                        # Try to get any text content from the event
+                        if hasattr(event, '__str__'):
+                            event_str = str(event)
+                            if event_str and event_str != "None":
+                                response_text = event_str.strip()
+                                logger.info(f"✅ Using event string as response: {response_text[:100]}...")
+                                break
+                
+                if not response_text:
+                    logger.warning("⚠️ No response text found from runner events")
+                    response_text = "No response from agent"
+                    
+                logger.info("✅ Runner processing completed successfully")
+                
+            except Exception as e:
+                logger.error(f"❌ Runner processing failed: {str(e)}")
+                response_text = f"Runner Error: {str(e)}"
+                
+            logger.info(f"📄 Raw response length: {len(response_text)} characters")
+            logger.debug(f"📄 Raw response: {response_text[:200]}{'...' if len(response_text) > 200 else ''}")
             
             # Try to parse JSON from the response
+            logger.info("🔍 Attempting to parse JSON response")
             try:
                 # Look for JSON in the response (it might be wrapped in markdown)
                 if '```json' in response_text:
+                    logger.info("📋 Found JSON in markdown code block")
                     # Extract JSON from markdown code block
                     start = response_text.find('```json') + 7
                     end = response_text.find('```', start)
                     json_str = response_text[start:end].strip()
                 elif '```' in response_text:
+                    logger.info("📋 Found JSON in code block")
                     # Extract JSON from code block
                     start = response_text.find('```') + 3
                     end = response_text.find('```', start)
                     json_str = response_text[start:end].strip()
                 else:
+                    logger.info("📋 Looking for JSON array in response")
                     # Try to find JSON array in the response
                     start = response_text.find('[')
                     end = response_text.rfind(']') + 1
                     if start != -1 and end != 0:
                         json_str = response_text[start:end]
+                        logger.info("✅ Found JSON array in response")
                     else:
                         json_str = response_text
+                        logger.warning("⚠️ No JSON array found, using full response")
                 
                 # Parse the JSON
                 parsed_data = json.loads(json_str)
+                logger.info("✅ JSON parsed successfully")
                 
                 # Validate the structure
                 if not isinstance(parsed_data, list):
+                    logger.error("❌ Response is not a list")
                     raise ValueError("Response is not a list")
                 
                 entries = []
-                for item in parsed_data:
+                for i, item in enumerate(parsed_data):
                     if not isinstance(item, dict):
+                        logger.warning(f"⚠️ Skipping non-dict item {i}")
                         continue
                     
                     # Validate required fields
                     if 'category' not in item or 'amount' not in item:
+                        logger.warning(f"⚠️ Skipping item {i} with missing required fields")
                         continue
                     
                     # Create expense entry
@@ -203,37 +354,50 @@ class AIAssistantService:
                         notes=item.get('notes', '')
                     )
                     entries.append(entry)
+                    logger.info(f"✅ Created entry {i+1}: {entry.category} - ${entry.amount}")
                 
                 # Calculate confidence based on response quality
                 confidence = 0.8 if entries else 0.0
+                logger.info(f"📊 Processed {len(entries)} entries with confidence {confidence}")
                 
                 return AIAssistantResponse(
                     entries=entries,
                     confidence=confidence,
                     raw_response=response_text,
-                    full_prompt=full_prompt
+                    full_prompt=f"System prompt + User input: {prompt}"
                 )
                 
             except (json.JSONDecodeError, ValueError, KeyError) as e:
+                logger.error(f"❌ JSON parsing failed: {str(e)}")
                 # If JSON parsing fails, return the raw response for debugging
                 return AIAssistantResponse(
                     entries=[],
                     confidence=0.0,
                     raw_response=f"Failed to parse AI response as JSON: {str(e)}\n\nRaw response:\n{response_text}",
-                    full_prompt=full_prompt
+                    full_prompt=f"System prompt + User input: {prompt}"
                 )
                 
         except Exception as e:
+            logger.error(f"❌ AI processing failed: {str(e)}")
             raise HTTPException(
                 status_code=500,
                 detail=f"AI processing failed: {str(e)}"
             )
 
-    @staticmethod
-    def get_health_status() -> Dict[str, Any]:
+    def get_health_status(self) -> Dict[str, Any]:
         """Get AI assistant health status"""
-        return {
-            "status": "healthy" if client else "unconfigured",
-            "model_available": client is not None,
-            "api_key_configured": GOOGLE_API_KEY is not None
-        } 
+        logger.info("🏥 Checking AI assistant health status")
+        status = {
+            "status": "healthy" if GOOGLE_API_KEY else "unconfigured",
+            "model_available": GOOGLE_API_KEY is not None,
+            "api_key_configured": GOOGLE_API_KEY is not None,
+            "adk_initialized": self.agent is not None,
+            "runner_initialized": self.runner is not None,
+            "session_service_available": self.session_service is not None
+        }
+        logger.info(f"🏥 Health status: {status}")
+        return status
+
+# Create a singleton instance
+logger.info("🏗️ Creating AI Assistant Service singleton")
+ai_assistant_service = AIAssistantService() 
