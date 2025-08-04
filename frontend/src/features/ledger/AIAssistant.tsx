@@ -5,20 +5,18 @@ import api from '../../config/api';
 interface ExpenseEntry {
   category: string;
   amount: number;
-  year?: number;
-  month?: number;
   notes?: string;
 }
 
 interface AIAssistantResponse {
+  year?: number;
+  month?: number;
   entries: ExpenseEntry[];
-  confidence: number;
   raw_response: string;
-  full_prompt: string;
 }
 
 interface AIAssistantProps {
-  onConfirmEntries: (entries: ExpenseEntry[], selectedUser?: string, selectedCreditCard?: string) => Promise<number>;
+  onConfirmEntries: (entries: ExpenseEntry[], selectedUser?: string, selectedCreditCard?: string, year?: number, month?: number) => Promise<number>;
   onClose: () => void;
   currentUser?: string;
   currentCreditCard?: string;
@@ -33,6 +31,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
   const [aiResponse, setAiResponse] = useState<AIAssistantResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingEntries, setEditingEntries] = useState<ExpenseEntry[]>([]);
+  const [editingYear, setEditingYear] = useState<number>(new Date().getFullYear());
+  const [editingMonth, setEditingMonth] = useState<number>(new Date().getMonth() + 1);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedUser, setSelectedUser] = useState(currentUser || '');
   const [selectedCreditCard, setSelectedCreditCard] = useState('');
@@ -113,6 +113,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
       
       if (data.entries.length > 0) {
         setEditingEntries(data.entries);
+        setEditingYear(data.year || new Date().getFullYear());
+        setEditingMonth(data.month || new Date().getMonth() + 1);
         setIsEditing(true);
       }
     } catch (err: any) {
@@ -139,7 +141,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
     setSubmitError(null);
     
     try {
-      const createdCount = await onConfirmEntries(editingEntries, selectedUser, selectedCreditCard);
+      const createdCount = await onConfirmEntries(editingEntries, selectedUser, selectedCreditCard, editingYear, editingMonth);
       setCreatedEntriesCount(createdCount);
       setShowSuccessPopup(true);
     } catch (err: any) {
@@ -153,10 +155,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
   const isFormValid = () => {
     if (editingEntries.length === 0) return false;
     
-    const firstEntry = editingEntries[0];
     return (
-      firstEntry.year &&
-      firstEntry.month &&
+      editingYear &&
+      editingMonth &&
       selectedUser &&
       selectedCreditCard
     );
@@ -351,11 +352,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                     : 'No expenses found'
                   }
                 </span>
-                {aiResponse.entries.length > 0 && (
-                  <span className="text-sm text-gray-500">
-                    (Confidence: {(aiResponse.confidence * 100).toFixed(0)}%)
-                  </span>
-                )}
+
               </div>
 
               {aiResponse.entries.length === 0 && (
@@ -431,15 +428,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                     </label>
                     <input
                       type="number"
-                      value={editingEntries[0]?.year || new Date().getFullYear()}
+                      value={editingYear}
                       onChange={(e) => {
                         const year = parseInt(e.target.value);
-                        setEditingEntries(prev => 
-                          prev.map(entry => ({ ...entry, year: year }))
-                        );
+                        setEditingYear(year);
                       }}
                       className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        !editingEntries[0]?.year ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        !editingYear ? 'border-red-300 bg-red-50' : 'border-gray-300'
                       }`}
                     />
                   </div>
@@ -448,15 +443,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
                       Month <span className="text-red-500">*</span>
                     </label>
                     <select
-                      value={editingEntries[0]?.month || new Date().getMonth() + 1}
+                      value={editingMonth}
                       onChange={(e) => {
                         const month = parseInt(e.target.value);
-                        setEditingEntries(prev => 
-                          prev.map(entry => ({ ...entry, month: month }))
-                        );
+                        setEditingMonth(month);
                       }}
                       className={`w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                        !editingEntries[0]?.month ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        !editingMonth ? 'border-red-300 bg-red-50' : 'border-gray-300'
                       }`}
                     >
                       {[
@@ -621,18 +614,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ onConfirmEntries, onClose, cu
         </div>
       </div>
 
-      {/* Full Prompt */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Full Prompt Sent to AI</h4>
-        <div className="text-xs text-gray-600 bg-white p-3 rounded border max-h-60 overflow-y-auto">
-          <pre className="whitespace-pre-wrap">{aiResponse.full_prompt}</pre>
-          {image && (
-            <div className="mt-2 text-gray-500">
-              <strong>Image:</strong> 1 file uploaded
-            </div>
-          )}
-        </div>
-      </div>
+
 
       {/* Raw Model Response */}
       <div className="bg-gray-50 rounded-lg p-4">

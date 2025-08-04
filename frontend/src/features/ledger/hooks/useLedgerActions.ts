@@ -103,7 +103,7 @@ export const useLedgerActions = (
     }
   };
 
-  const handleAIAssistantEntries = async (entries: any[], selectedUser?: string, selectedCreditCard?: string) => {
+  const handleAIAssistantEntries = async (entries: any[], selectedUser?: string, selectedCreditCard?: string, year?: number, month?: number) => {
     try {
       // Use selected user and credit card, or fall back to defaults
       const currentUser = localStorage.getItem('user_data') ? JSON.parse(localStorage.getItem('user_data')!) : null;
@@ -113,13 +113,13 @@ export const useLedgerActions = (
       
       // Get current date for default year/month
       const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = now.getMonth() + 1;
+      const currentYear = year || now.getFullYear();
+      const currentMonth = month || now.getMonth() + 1;
       
       // Convert AI entries to ledger entries
       const ledgerEntries = entries.map(entry => ({
-        year: entry.year || currentYear,
-        month: entry.month || currentMonth,
+        year: currentYear,
+        month: currentMonth,
         user_name: defaultUserName,
         credit_card: defaultCreditCard,
         category: entry.category,

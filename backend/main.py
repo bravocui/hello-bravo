@@ -1,5 +1,12 @@
 from fastapi import FastAPI
 import uvicorn
+import logging
+
+# Configure global logging
+logging.basicConfig(level=logging.ERROR)
+
+# Configure Google ADK logger to INFO level for debugging
+logging.getLogger("google.adk.models.google_llm").setLevel(logging.INFO)
 
 # Import configuration
 from config import ENVIRONMENT

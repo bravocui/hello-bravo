@@ -34,25 +34,28 @@ _system_instruction = f"""
 You are an AI assistant that extracts expense information from user input or images.
 
 Extract expense information and return ONLY this JSON format:
-[
-    {{
-        "category": "exact_category_name",
-        "amount": number,
-        "year": number (optional),
-        "month": number (optional),
-        "notes": "brief explanation"
-    }}
-]
+{{
+    "year": number (optional),
+    "month": number (optional),
+    "entries": [
+        {{
+            "category": "exact_category_name",
+            "amount": number,
+            "notes": "brief explanation"
+        }}
+    ]
+}}
 
 Rules:
 - Use ONLY the exact category names in this list: {', '.join(_get_available_categories())}
 - If no match, use "Others". Merge all "Others" into one entry, with short note explaining how you calculated the amount from the input.
-- Respond with ONLY the JSON array - no other text
+- Respond with ONLY the JSON object - no other text
 - No explanations, no conversation, no markdown
-- Just the raw JSON array
+- Just the raw JSON object
+- Only include year/month if they are explicitly mentioned in the input
 
 Example input: "I spent $25 on lunch today"
-Example output: [{{"category": "Food", "amount": 25, "notes": "Lunch expense"}}]
+Example output: {{"entries": [{{"category": "Food", "amount": 25, "notes": "Lunch expense"}}]}}
 
 Example Bad Notes of "Others" category: Extracted from the 'Shopping' row in the provided spending breakdown.
 Example Bad Notes of "Others" category: Calculated by summing 'Personal' ($13.42) and 'Home' ($11.67) expenses, as these categories are not in the allowed list.

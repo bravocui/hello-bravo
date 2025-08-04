@@ -24,7 +24,6 @@ from llm.expense_processor_agent import expense_processor_agent
 LEDGER_APP_NAME = "ledger_app"
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Validate Google API key
@@ -34,15 +33,14 @@ assert GOOGLE_API_KEY, "GOOGLE_API_KEY environment variable is required for ADK"
 class ExpenseEntry(BaseModel):
     category: str
     amount: float
-    year: Optional[int] = None
-    month: Optional[int] = None
     notes: Optional[str] = ""
 
 
 class AIAssistantResponse(BaseModel):
+    year: Optional[int] = None
+    month: Optional[int] = None
     entries: List[ExpenseEntry]
     raw_response: str
-    full_prompt: str
 
 
 class AIAssistantService:
@@ -55,8 +53,8 @@ class AIAssistantService:
         self.runner = adk_runtime.get_or_create_runner(self.app_name, self.agent)
         logger.info("[OK] AI Assistant Service initialized")
 
-    def _parse_and_validate_response(self, response_text: str, prompt: str) -> List[ExpenseEntry]:
-        """Parse and validate the AI response to extract expense entries"""
+    def _parse_and_validate_response(self, response_text: str, prompt: str) -> tuple[List[ExpenseEntry], int, int]:
+        """Parse and validate the AI response to extract expense entries, year, and month"""
         logger.info("[PARSE] Attempting to parse JSON response")
         try:
             # Look for JSON in the response (it might be wrapped in markdown)
@@ -67,51 +65,49 @@ class AIAssistantService:
                 end = response_text.find("```", start)
                 json_str = response_text[start:end].strip()
             elif "```" in response_text:
-                logger.info("[JSON] Found JSON in code block")
                 # Extract JSON from code block
                 start = response_text.find("```") + 3
                 end = response_text.find("```", start)
                 json_str = response_text[start:end].strip()
             else:
-                logger.info("[JSON] Looking for JSON array in response")
-                # Try to find JSON array in the response
-                start = response_text.find("[")
-                end = response_text.rfind("]") + 1
+                # Try to find JSON object in the response
+                start = response_text.find("{")
+                end = response_text.rfind("}") + 1
                 if start != -1 and end != 0:
                     json_str = response_text[start:end]
-                    logger.info("[OK] Found JSON array in response")
                 else:
-                    json_str = '''[{ "category": "Others", "notes": "ERROR!!! Bad response from agent." }]'''
-                    logger.warning(
-                        f"[WARN] No JSON array found, using fake response. Full reponse {response_text} "
-                    )
+                    logger.warning(f"[WARN] No JSON object found. Full response {response_text}.")
+                    return [], None, None
 
             # Parse the JSON
             parsed_data = json.loads(json_str)
-            logger.info("[OK] JSON parsed successfully")
+
+            # Extract year and month from the response (leave as None if not found)
+            year = parsed_data.get("year")
+            month = parsed_data.get("month")
+            
+            # Extract entries array
+            entries_data = parsed_data.get("entries", [])
+            if not isinstance(entries_data, list):
+                logger.warning("[WARN] No entries array found, using empty array")
+                entries_data = []
 
             # Validate with pydantic
             entries = []
-            for i, item in enumerate(parsed_data):
-                try:
-                    entry = ExpenseEntry(
-                        category=item["category"],
-                        amount=float(item["amount"]),
-                        year=item.get("year"),
-                        month=item.get("month"),
-                        notes=item.get("notes", ""),
-                    )
-                    entries.append(entry)
-                except (KeyError, ValueError, TypeError) as e:
-                    logger.warning(f"[WARN] Skipping invalid item {i}: {str(e)}")
-                    continue
+            for item in entries_data:
+                entry = ExpenseEntry(
+                    category=item["category"],
+                    amount=float(item["amount"]),
+                    notes=item.get("notes", ""),
+                )
+                entries.append(entry)
 
-            return entries
+            return entries, year, month
 
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"[ERROR] JSON parsing failed: {str(e)}")
-            # If JSON parsing fails, return empty entries
-            return []
+            # If JSON parsing fails, return empty entries with no year/month
+            return [], None, None
 
 
     async def process_expense_with_ai(
@@ -135,31 +131,28 @@ class AIAssistantService:
             user_message = Content(role="user", parts=message_parts)
 
             # Use the runner to process the message (runner handles sessions internally)
-            try:
-                response_events = self.runner.run(
-                    user_id=user_id, session_id=session.id, new_message=user_message
-                )
-                # Extract response from events
-                response_text = ""
-                for event in response_events:
-                    if event.is_final_response() and event.content and event.content.parts:
-                        response_text = ''.join(
-                            [part.text if part.text else '' for part in event.content.parts]
-                        )
-                        break
+            response_events = self.runner.run(
+                user_id=user_id, session_id=session.id, new_message=user_message
+            )
+            # Extract response from events
+            response_text = ""
+            for event in response_events:
+                if event.is_final_response() and event.content and event.content.parts:
+                    response_text = ''.join(
+                        [part.text if part.text else '' for part in event.content.parts]
+                    )
+                    break
 
-                if not response_text:
-                    logger.warning("[WARN] No response text found from runner events")
-                    response_text = "No response from agent"
-
-            except Exception as e:
-                logger.error(f"[ERROR] Runner processing failed: {str(e)}")
-                response_text = f"Runner Error: {str(e)}"
+            if not response_text:
+                logger.warning("[WARN] No response text found from runner events")
+                response_text = "No response from agent"
             
+            entries, year, month = self._parse_and_validate_response(response_text, prompt)
             return AIAssistantResponse(
-                entries=self._parse_and_validate_response(response_text, prompt),
+                year=year,
+                month=month,
+                entries=entries,
                 raw_response=response_text,
-                full_prompt=f"System prompt + User input: {prompt}",
             )
 
         except Exception as e:

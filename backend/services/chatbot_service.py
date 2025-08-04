@@ -8,7 +8,6 @@ import logging
 from config import MODEL_NAME_GENAI
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configure Google Generative AI
