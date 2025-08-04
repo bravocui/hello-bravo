@@ -18,7 +18,7 @@ from google.adk.runners import Runner
 from google.genai.types import Blob, Content, Part
 from llm.utils import process_image
 from llm.adk_runtime import adk_runtime
-from llm.expense_processor_agent import create_or_get_expense_processor_agent, EXPENSE_PROCESSOR_AGENT_NAME
+from llm.expense_processor_agent import expense_processor_agent
 
 # Global constants
 LEDGER_APP_NAME = "ledger_app"
@@ -50,20 +50,8 @@ class AIAssistantService:
         """Initialize the ADK service with session management"""
         self.app_name = LEDGER_APP_NAME
         
-        # Get available categories and initialize agent and runner
-        try:
-            from database.database import get_db_session
-            db = get_db_session()
-            try:
-                categories = db.query(DBSpendingCategory).all()
-                category_names = [cat.category_name for cat in categories]
-            finally:
-                db.close()
-        except Exception as e:
-            logger.error(f"[ERROR] Database error while fetching categories: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-        
-        self.agent = create_or_get_expense_processor_agent(category_names)
+        # Initialize agent and runner
+        self.agent = expense_processor_agent
         self.runner = adk_runtime.get_or_create_runner(self.app_name, self.agent)
         logger.info("[OK] AI Assistant Service initialized")
 
