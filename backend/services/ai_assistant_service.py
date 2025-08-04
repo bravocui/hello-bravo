@@ -71,11 +71,11 @@ class AIAssistantService:
 
     def _create_system_prompt(self, category_names: List[str]) -> str:
         """Create the system prompt for AI processing"""
-        logger.info("📝 Creating system prompt with categories")
+        category_names_str = ', '.join(category_names)
+        logger.info(f"📝 Creating system prompt with categories: {category_names_str}")
+        
         prompt = f"""
-You are a JSON-only expense processor. You MUST respond with ONLY a valid JSON array.
-
-Available categories: {', '.join(category_names)}
+You are an AI assistant that extracts expense information from user input or images.
 
 Extract expense information and return ONLY this JSON format:
 [
@@ -88,9 +88,12 @@ Extract expense information and return ONLY this JSON format:
     }}
 ]
 
+IMPORTANT: You must use ONLY these exact category names from the database:
+{', '.join(category_names)}. If no match, use "Others". 
+
 Rules:
-- Use ONLY the exact category names listed above
-- If no match, use "Others"
+- Use ONLY the exact category names in this list: {', '.join(category_names)}
+- If no match, use "Others". Merge all "Others" into one entry, with short note explaining how you calculated the amount from the input.
 - Respond with ONLY the JSON array - no other text
 - No explanations, no conversation, no markdown
 - Just the raw JSON array
@@ -98,10 +101,15 @@ Rules:
 Example input: "I spent $25 on lunch today"
 Example output: [{{"category": "Food", "amount": 25, "notes": "Lunch expense"}}]
 
-Remember: ONLY JSON, nothing else.
+Example Bad Notes of "Others" category: Extracted from the 'Shopping' row in the provided spending breakdown.
+Example Bad Notes of "Others" category: Calculated by summing 'Personal' ($13.42) and 'Home' ($11.67) expenses, as these categories are not in the allowed list.
+Example Good Notes of "Others" category: From 'Shopping' row.
+Example Good Notes of "Others" category: Sum: 'Personal' ($13.42) + 'Home' ($11.67) = $25.09.
         """
+
         logger.info("✅ System prompt created successfully")
-        logger.debug(f"📋 System prompt: {prompt}")
+        logger.debug(f"📋 System prompt length: {len(prompt)} characters")
+        logger.debug(f"📋 System prompt preview: {prompt[:200]}...")
         return prompt
 
     def _initialize_agent_and_runner(self, db: Session):
@@ -110,6 +118,8 @@ Remember: ONLY JSON, nothing else.
         category_names = self._get_available_categories(db)
         system_prompt = self._create_system_prompt(category_names)
         
+        logger.info(f"🤖 Creating agent with prompt length: {len(system_prompt)}")
+        
         # Create the agent
         self.agent = Agent(
             name="ExpenseProcessor",
@@ -117,6 +127,8 @@ Remember: ONLY JSON, nothing else.
             description="Agent to extract and process expense information from text and images",
             instruction=system_prompt
         )
+        
+        logger.info(f"🤖 Agent created with instruction length: {len(self.agent.instruction)}")
         
         # Create the runner
         self.runner = Runner(
@@ -127,6 +139,25 @@ Remember: ONLY JSON, nothing else.
         
         logger.info(f"✅ ADK Agent initialized: {self.agent.name} using model {self.agent.model}")
         logger.info(f"✅ ADK Runner initialized with app_name: {self.app_name}")
+
+    async def _get_or_create_session(self, user_id: str = "default_user"):
+        """Get an existing session if it exists, otherwise create a new one."""
+		# WARNING: This is vulnerable to race conditions!
+		# This is provided solely as an example for demonstration purposes.
+		# DO NOT USE THIS PATTERN IN PRODUCTION.
+        logging.info("Checking existing session")
+
+        existing_sessions = self.session_service.list_sessions(
+			app_name=self.app_name, user_id=user_id
+		)
+        if existing_sessions.sessions:
+            logging.info("Reusing existing session")
+            return existing_sessions.sessions[0]
+
+        logging.info("Creating new session with no context")
+        return self.session_service.create_session(
+            app_name=self.app_name, user_id=user_id
+        )
 
     def _process_image(self, image_file: UploadFile) -> Part:
         """Process an uploaded image file and return a Part for ADK"""
@@ -186,16 +217,9 @@ Remember: ONLY JSON, nothing else.
             
             # Create session before using runner
             logger.info(f"📋 Creating session for user {user_id}, session {session_id}")
-            try:
-                await self.session_service.create_session(
-                    app_name=self.app_name,
-                    user_id=user_id,
-                    session_id=session_id
-                )
-                logger.info("✅ Session created successfully")
-            except Exception as e:
-                logger.info(f"📋 Session might already exist: {str(e)}")
-            
+            session = await self._get_or_create_session(user_id)
+            logger.info(f"✅ Session created successfully {str(session.id)}")
+           
             # Prepare message parts
             logger.info("📦 Preparing message parts")
             message_parts = [Part(text=prompt)]
@@ -209,7 +233,7 @@ Remember: ONLY JSON, nothing else.
                     message_parts.append(image_part)
             
             # Create the user message
-            user_message = Content(parts=message_parts)
+            user_message = Content(role="user", parts=message_parts)
             logger.info(f"📨 Created user message with {len(message_parts)} parts")
             
             # Use the runner to process the message (runner handles sessions internally)
@@ -217,7 +241,7 @@ Remember: ONLY JSON, nothing else.
             try:
                 response_events = self.runner.run(
                     user_id=user_id,
-                    session_id=session_id,
+                    session_id=session.id,
                     new_message=user_message
                 )
                 
@@ -329,12 +353,13 @@ Remember: ONLY JSON, nothing else.
                 parsed_data = json.loads(json_str)
                 logger.info("✅ JSON parsed successfully")
                 
+                entries = []
+
                 # Validate the structure
                 if not isinstance(parsed_data, list):
                     logger.error("❌ Response is not a list")
-                    raise ValueError("Response is not a list")
+                    # raise ValueError("Response is not a list")
                 
-                entries = []
                 for i, item in enumerate(parsed_data):
                     if not isinstance(item, dict):
                         logger.warning(f"⚠️ Skipping non-dict item {i}")
