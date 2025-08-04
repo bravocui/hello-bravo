@@ -53,6 +53,7 @@ GCS_PREFIX = os.getenv("GCS_PREFIX", "dev/")
 
 # Google AI configuration
 MODEL_NAME_GENAI = os.getenv("MODEL_NAME_GENAI", "gemini-2.0-flash")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Debug: Print configuration (without sensitive data)
 print(f"🔧 Environment: {ENVIRONMENT}")

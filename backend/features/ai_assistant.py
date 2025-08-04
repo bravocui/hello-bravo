@@ -12,16 +12,13 @@ router = APIRouter(prefix="/ai-assistant", tags=["ai-assistant"])
 async def process_expense_with_ai(
     prompt: str = Form(...),
     images: List[UploadFile] = File(default=[]),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user)
 ):
     """Process text and images to extract expense information using AI"""
     return await ai_assistant_service.process_expense_with_ai(
-        db=db, 
         prompt=prompt, 
         images=images,
-        user_id=str(current_user.id),
-        session_id=f"session_{current_user.id}"
+        user_id=str(current_user.id)
     )
 
 @router.get("/health")
