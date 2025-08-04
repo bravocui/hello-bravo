@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { DollarSign } from 'lucide-react';
 import Header from '../../common/components/Header';
-import AIAssistant from '../../common/components/AIAssistant';
+import AIAssistant from './AIAssistant';
 import AddExpenseModal from '../../common/components/AddExpenseModal';
 import { useLedgerData } from './hooks/useLedgerData';
 import { useLedgerFilters } from './hooks/useLedgerFilters';

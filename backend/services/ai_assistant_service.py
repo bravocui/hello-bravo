@@ -102,14 +102,10 @@ class AIAssistantService:
                         notes=item.get("notes", ""),
                     )
                     entries.append(entry)
-                    logger.info(
-                        f"[OK] Created entry {i+1}: {entry.category} - ${entry.amount}"
-                    )
                 except (KeyError, ValueError, TypeError) as e:
                     logger.warning(f"[WARN] Skipping invalid item {i}: {str(e)}")
                     continue
 
-            logger.info(f"[STATS] Processed {len(entries)} entries")
             return entries
 
         except (json.JSONDecodeError, ValueError) as e:
