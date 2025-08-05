@@ -26,11 +26,13 @@ def _get_available_categories() -> list[str]:
             db.close()
     except Exception as e:
         logger.error(f"[ERROR] Database error while fetching categories: {str(e)}")
-        raise Exception(f"Database error: {str(e)}")
+        return ["Food", "Transport", "Shopping", "Others"] # Fallback categories
 
 
 # System instruction template
-_system_instruction = f"""
+def get_system_instruction() -> str:
+    """Get the system instruction for the agent."""
+    return f"""
 You are an AI assistant that extracts expense information from user input or images.
 
 Extract expense information and return ONLY this JSON format:
@@ -69,7 +71,7 @@ expense_processor_agent = Agent(
     name=EXPENSE_PROCESSOR_AGENT_NAME,
     model=MODEL_NAME_GENAI,
     description="Agent to extract and process expense information from text and images",
-    instruction=_system_instruction,
+    instruction=get_system_instruction,
 )
 logger.info(f"[INIT] Agent initialized at module import: {EXPENSE_PROCESSOR_AGENT_NAME}")
 
