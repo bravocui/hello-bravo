@@ -93,11 +93,11 @@ class ChatbotService:
 
             # Use the runner to process the message in a streaming fashion
             response_events = self.runner.run(
-                user_id=user_id, session_id=session.id, new_message=user_message, stream=True
+                user_id=user_id, session_id=session.id, new_message=user_message
             )
-
-            # Yield response chunks
-            async for event in response_events:
+ 
+             # Yield response chunks
+            for event in response_events:
                 if event.is_content_delta() and event.content_delta and event.content_delta.parts:
                     chunk_text = "".join(
                         [part.text if part.text else "" for part in event.content_delta.parts]
@@ -105,6 +105,8 @@ class ChatbotService:
                     # Clean the chunk before yielding
                     cleaned_chunk = self._parse_response(chunk_text)
                     if cleaned_chunk:
+                        # If the caller expects async generator, yield via asyncio.sleep(0) between chunks
+                        await asyncio.sleep(0)
                         yield cleaned_chunk
 
         except Exception as e:
