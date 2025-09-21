@@ -180,3 +180,5 @@ web/.yarn/*
 .env.backup
 backend/.env.dev
 backend/.env.prod
+frontend/.env.production
+frontend/.env.development
