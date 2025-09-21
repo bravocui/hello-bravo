@@ -5,7 +5,8 @@ import { LedgerEntry } from '../types';
 export const useLedgerActions = (
   ledgerData: LedgerEntry[],
   setLedgerData: React.Dispatch<React.SetStateAction<LedgerEntry[]>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>
+  setError: React.Dispatch<React.SetStateAction<string | null>>,
+  users: Array<{id: number, name: string, email: string}>
 ) => {
   const [editingEntry, setEditingEntry] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<Partial<LedgerEntry>>({});
@@ -111,6 +112,12 @@ export const useLedgerActions = (
       const userCreditCards = ledgerData.filter(entry => entry.user?.name === defaultUserName);
       const defaultCreditCard = selectedCreditCard || (userCreditCards.length > 0 ? userCreditCards[0].credit_card : '');
       
+      // Find the user ID for the selected user
+      const selectedUserData = users.find(user => user.name === defaultUserName);
+      if (!selectedUserData) {
+        throw new Error(`User "${defaultUserName}" not found`);
+      }
+      
       // Get current date for default year/month
       const now = new Date();
       const currentYear = year || now.getFullYear();
@@ -120,7 +127,7 @@ export const useLedgerActions = (
       const ledgerEntries = entries.map(entry => ({
         year: currentYear,
         month: currentMonth,
-        user_name: defaultUserName,
+        user_id: selectedUserData.id,
         credit_card: defaultCreditCard,
         category: entry.category,
         amount: entry.amount,

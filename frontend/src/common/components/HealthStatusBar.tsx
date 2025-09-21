@@ -2,6 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Monitor, Server, Database, Wrench, Globe, Hand, GitBranch } from 'lucide-react';
 import { healthApi } from '../../config/api';
 
+// Tooltip component
+const Tooltip: React.FC<{ children: React.ReactNode; content: string }> = ({ children, content }) => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div 
+      className="relative inline-block"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      {children}
+      {isVisible && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap z-50">
+          {content}
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface HealthStatus {
   status: string;
   database: {
@@ -114,29 +135,43 @@ const HealthStatusBar: React.FC = () => {
       <div className="flex items-center justify-center space-x-2">
         <span className="flex items-center space-x-1">
           {/* Frontend */}
-          <Monitor className="w-3 h-3" />
-          <EnvironmentIcon className="w-3 h-3" />
-          <DeploymentMethodIcon className="w-3 h-3" />
+          <Tooltip content="Frontend Application">
+            <Monitor className="w-3 h-3" />
+          </Tooltip>
+          <Tooltip content={`Environment: ${getFrontendEnvironment() === 'dev' ? 'Development' : 'Production'}`}>
+            <EnvironmentIcon className="w-3 h-3" />
+          </Tooltip>
+          <Tooltip content={`Deployment: ${getDeploymentMethod() === 'git' ? 'GitHub Actions' : 'Manual'}`}>
+            <DeploymentMethodIcon className="w-3 h-3" />
+          </Tooltip>
           
           <span>|</span>
           
           {/* Backend */}
-          <Server className="w-3 h-3" />
-          {isHealthy ? (
-            <CheckCircle className="w-3 h-3" />
-          ) : (
-            <AlertCircle className="w-3 h-3" />
-          )}
+          <Tooltip content="Backend Server">
+            <Server className="w-3 h-3" />
+          </Tooltip>
+          <Tooltip content={isHealthy ? `Backend Status: ${healthStatus.status}` : `Backend Error: ${healthStatus.status}`}>
+            {isHealthy ? (
+              <CheckCircle className="w-3 h-3" />
+            ) : (
+              <AlertCircle className="w-3 h-3" />
+            )}
+          </Tooltip>
           
           <span>|</span>
           
           {/* Database */}
-          <Database className="w-3 h-3" />
-          {healthStatus.database.available ? (
-            <CheckCircle className="w-3 h-3" />
-          ) : (
-            <AlertCircle className="w-3 h-3" />
-          )}
+          <Tooltip content="Database Connection">
+            <Database className="w-3 h-3" />
+          </Tooltip>
+          <Tooltip content={healthStatus.database.available ? `Database: Connected` : `Database: ${healthStatus.database.error || 'Connection Failed'}`}>
+            {healthStatus.database.available ? (
+              <CheckCircle className="w-3 h-3" />
+            ) : (
+              <AlertCircle className="w-3 h-3" />
+            )}
+          </Tooltip>
         </span>
       </div>
     </div>

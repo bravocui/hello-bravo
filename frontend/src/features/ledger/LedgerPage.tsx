@@ -62,7 +62,7 @@ const LedgerPage: React.FC = () => {
     startEditing,
     cancelEditing,
     startAdding
-  } = useLedgerActions(ledgerData, setLedgerData, setError);
+  } = useLedgerActions(ledgerData, setLedgerData, setError, users);
 
   // Filter data based on all filters
   const filteredData = useMemo(() => {

@@ -25,8 +25,10 @@ def _get_available_categories() -> list[str]:
         finally:
             db.close()
     except Exception as e:
-        logger.error(f"[ERROR] Database error while fetching categories: {str(e)}")
-        raise Exception(f"Database error: {str(e)}")
+        logger.warning(f"[WARNING] Database not available while fetching categories: {str(e)}")
+        logger.warning("[WARNING] Using default categories. Database connection will be retried when needed.")
+        # Return a default set of common categories when database is not available
+        return ["Food", "Transportation", "Entertainment", "Shopping", "Bills", "Healthcare", "Travel", "Others"]
 
 
 # System instruction template
