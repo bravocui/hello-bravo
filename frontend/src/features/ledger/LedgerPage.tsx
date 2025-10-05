@@ -179,6 +179,7 @@ const LedgerPage: React.FC = () => {
           filteredData={filteredData}
           selectedView={selectedView}
           setSelectedView={setSelectedView}
+          onShowAIAssistant={() => setShowAIAssistant(true)}
         />
 
         {/* Monthly Bar Chart */}
@@ -205,7 +206,6 @@ const LedgerPage: React.FC = () => {
             setEditForm={setEditForm}
             editLoading={editLoading}
             deleteLoading={deleteLoading}
-
             users={users}
             creditCards={creditCards}
             spendingCategories={spendingCategories}
@@ -213,7 +213,6 @@ const LedgerPage: React.FC = () => {
             onCancelEditing={cancelEditing}
             onUpdateEntry={handleUpdateEntry}
             onDeleteEntry={handleDeleteEntry}
-            onShowAIAssistant={() => setShowAIAssistant(true)}
             onStartAdding={startAdding}
           />
         )}

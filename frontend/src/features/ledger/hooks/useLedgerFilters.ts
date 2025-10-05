@@ -6,7 +6,7 @@ export const useLedgerFilters = (ledgerData: LedgerEntry[]) => {
   const [selectedCreditCard, setSelectedCreditCard] = useState<FilterValue>('all');
   const [selectedYear, setSelectedYear] = useState<FilterValue>('all');
   const [selectedMonth, setSelectedMonth] = useState<FilterValue>('all');
-  const [selectedView, setSelectedView] = useState<SelectedView>('detailed-data');
+  const [selectedView, setSelectedView] = useState<SelectedView>('credit-card-details');
 
   // Get unique users for the selector
   const uniqueUsers = useMemo(() => {

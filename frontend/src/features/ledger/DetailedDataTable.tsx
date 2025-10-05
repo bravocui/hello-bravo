@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BarChart3, ArrowUpDown, Bot, Plus, Edit, Save, X, Trash2 } from 'lucide-react';
+import { BarChart3, ArrowUpDown, Plus, Edit, Save, X, Trash2 } from 'lucide-react';
 import { LedgerEntry, User, CreditCard, SpendingCategory, TableSortField } from './types';
 import { formatCurrency } from './utils/formatters';
 import { getCategoryIcon } from './utils/categoryUtils';
@@ -18,7 +18,6 @@ interface DetailedDataTableProps {
   onCancelEditing: () => void;
   onUpdateEntry: (entryId: number) => void;
   onDeleteEntry: (entryId: number) => void;
-  onShowAIAssistant: () => void;
   onStartAdding: () => void;
 }
 
@@ -36,7 +35,6 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
   onCancelEditing,
   onUpdateEntry,
   onDeleteEntry,
-  onShowAIAssistant,
   onStartAdding
 }) => {
   const [tableSortField, setTableSortField] = useState<TableSortField>('year');
@@ -146,15 +144,6 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
             <ArrowUpDown className="w-4 h-4" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
               Reset Sort
-            </span>
-          </button>
-          <button
-            onClick={onShowAIAssistant}
-            className="group relative flex items-center px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
-          >
-            <Bot className="w-4 h-4" />
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-              AI Assistant
             </span>
           </button>
           <button

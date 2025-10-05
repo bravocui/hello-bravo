@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Bot } from 'lucide-react';
 import { Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { LedgerEntry, SelectedView, SortBy, SortOrder } from './types';
 import { formatCurrency } from './utils/formatters';
@@ -10,13 +10,15 @@ interface ExpenseSummaryProps {
   filteredData: LedgerEntry[];
   selectedView: SelectedView;
   setSelectedView: (view: SelectedView) => void;
+  onShowAIAssistant: () => void;
 }
 
 const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({
   totalExpenses,
   filteredData,
   selectedView,
-  setSelectedView
+  setSelectedView,
+  onShowAIAssistant
 }) => {
   const [sortBy, setSortBy] = useState<SortBy>('amount');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -44,6 +46,15 @@ const ExpenseSummary: React.FC<ExpenseSummaryProps> = ({
             <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
           </div>
         </div>
+        <button
+          onClick={onShowAIAssistant}
+          className="group relative flex items-center px-4 py-2 rounded-lg transition-colors bg-blue-600 text-white hover:bg-blue-700"
+        >
+          <Bot className="w-4 h-4" />
+          <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+            AI Assistant
+          </span>
+        </button>
       </div>
       
       <div className="flex flex-col md:flex-row gap-6">

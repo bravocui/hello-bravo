@@ -111,6 +111,13 @@ export const useLedgerActions = (
       const userCreditCards = ledgerData.filter(entry => entry.user?.name === defaultUserName);
       const defaultCreditCard = selectedCreditCard || (userCreditCards.length > 0 ? userCreditCards[0].credit_card : '');
       
+      // Find the user ID for the selected user name
+      const selectedUserEntry = ledgerData.find(entry => entry.user?.name === defaultUserName);
+      if (!selectedUserEntry) {
+        throw new Error(`User "${defaultUserName}" not found in ledger data`);
+      }
+      const userId = selectedUserEntry.user_id;
+      
       // Get current date for default year/month
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -120,7 +127,7 @@ export const useLedgerActions = (
       const ledgerEntries = entries.map(entry => ({
         year: entry.year || currentYear,
         month: entry.month || currentMonth,
-        user_name: defaultUserName,
+        user_id: userId,
         credit_card: defaultCreditCard,
         category: entry.category,
         amount: entry.amount,
