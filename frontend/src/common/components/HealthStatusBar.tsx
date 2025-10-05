@@ -2,12 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Monitor, Server, Database, Wrench, Globe, Hand, GitBranch } from 'lucide-react';
 import { healthApi } from '../../config/api';
 
+// Get API URL from environment variable, fallback to localhost for development
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 interface HealthStatus {
   status: string;
+  backend: {
+    address: string;
+    environment: string;
+  };
   database: {
     status: string;
     available: boolean;
     error: string | null;
+    host: string;
+    port: number;
+    database: string;
   };
   timestamp: string;
   environment?: string; // Backend environment
@@ -114,29 +124,74 @@ const HealthStatusBar: React.FC = () => {
       <div className="flex items-center justify-center space-x-2">
         <span className="flex items-center space-x-1">
           {/* Frontend */}
-          <Monitor className="w-3 h-3" />
-          <EnvironmentIcon className="w-3 h-3" />
-          <DeploymentMethodIcon className="w-3 h-3" />
+          <div className="group relative">
+            <Monitor className="w-3 h-3" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Frontend Application
+            </span>
+          </div>
+          
+          <div className="group relative">
+            <EnvironmentIcon className="w-3 h-3" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Environment: {getFrontendEnvironment() === 'dev' ? 'Development' : 'Production'}
+            </span>
+          </div>
+          
+          <div className="group relative">
+            <DeploymentMethodIcon className="w-3 h-3" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Deployment: {getDeploymentMethod() === 'git' ? 'GitHub Actions' : 'Manual'}
+            </span>
+          </div>
           
           <span>|</span>
           
           {/* Backend */}
-          <Server className="w-3 h-3" />
-          {isHealthy ? (
-            <CheckCircle className="w-3 h-3" />
-          ) : (
-            <AlertCircle className="w-3 h-3" />
-          )}
+          <div className="group relative">
+            <Server className="w-3 h-3" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Backend: {API_URL}
+            </span>
+          </div>
+          
+          <div className="group relative">
+            {isHealthy ? (
+              <CheckCircle className="w-3 h-3" />
+            ) : (
+              <AlertCircle className="w-3 h-3" />
+            )}
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Backend Status: {isHealthy ? 'Healthy' : 'Unhealthy'}
+            </span>
+          </div>
           
           <span>|</span>
           
           {/* Database */}
-          <Database className="w-3 h-3" />
-          {healthStatus.database.available ? (
-            <CheckCircle className="w-3 h-3" />
-          ) : (
-            <AlertCircle className="w-3 h-3" />
-          )}
+          <div className="group relative">
+            <Database className="w-3 h-3" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Database: {healthStatus.database.host}:{healthStatus.database.port}
+            </span>
+          </div>
+          
+          <div className="group relative">
+            {healthStatus.database.available ? (
+              <CheckCircle className="w-3 h-3" />
+            ) : (
+              <AlertCircle className="w-3 h-3" />
+            )}
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              Database Status: {healthStatus.database.available ? 'Connected' : 'Disconnected'}
+              {healthStatus.database.error && (
+                <>
+                  <br />
+                  Error: {healthStatus.database.error}
+                </>
+              )}
+            </span>
+          </div>
         </span>
       </div>
     </div>

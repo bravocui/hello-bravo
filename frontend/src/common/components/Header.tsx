@@ -60,14 +60,18 @@ const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center space-x-4">
               {/* Admin Portal Button */}
               {user?.role === 'ADMIN' && (
-                <button
-                  onClick={() => navigate('/admin-portal')}
-                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"
-                  title="Admin Portal"
-                >
-                  <Users className="w-4 h-4" />
-                  <span className="hidden sm:block text-sm">Admin Portal</span>
-                </button>
+                <div className="group relative">
+                  <button
+                    onClick={() => navigate('/admin-portal')}
+                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="hidden sm:block text-sm">Admin Portal</span>
+                  </button>
+                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                    Access Admin Portal
+                  </span>
+                </div>
               )}
               
               {showUserInfo && user && (
@@ -97,13 +101,18 @@ const Header: React.FC<HeaderProps> = ({
               )}
               
               {showLogout && (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:block text-sm">Logout</span>
-                </button>
+                <div className="group relative">
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:block text-sm">Logout</span>
+                  </button>
+                  <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                    Sign out of your account
+                  </span>
+                </div>
               )}
             </div>
           )}

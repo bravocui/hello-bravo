@@ -8,6 +8,7 @@ from database.database import get_db
 from app.startup import get_database_status
 from config import ENVIRONMENT
 from datetime import datetime
+from urllib.parse import urlparse
 
 # Request model for Google auth
 class GoogleAuthRequest(BaseModel):
@@ -15,6 +16,23 @@ class GoogleAuthRequest(BaseModel):
     stay_logged_in: bool = False
 
 router = APIRouter(tags=["core"])
+
+def _extract_database_info(database_url: str) -> dict:
+    """Extract database connection info while hiding sensitive data"""
+    try:
+        parsed = urlparse(database_url)
+        return {
+            "host": parsed.hostname or "unknown",
+            "port": parsed.port or 5432,
+            "database": parsed.path.lstrip('/') if parsed.path else "unknown"
+        }
+    except Exception:
+        return {
+            "host": "unknown",
+            "port": "unknown", 
+            "database": "unknown"
+        }
+
 
 # Auth endpoints
 @router.post("/auth/google")
@@ -112,12 +130,23 @@ async def health_check():
             db_status = "disconnected"
             db_error = str(e)
     
+    # Extract database connection info (hide sensitive data)
+    from config import DATABASE_URL
+    db_info = _extract_database_info(DATABASE_URL)
+    
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
+        "backend": {
+            "address": f"{ENVIRONMENT} server",
+            "environment": ENVIRONMENT
+        },
         "database": {
             "status": db_status,
             "available": database_available,
-            "error": db_error
+            "error": db_error,
+            "host": db_info["host"],
+            "port": db_info["port"],
+            "database": db_info["database"]
         },
         "environment": ENVIRONMENT,
         "timestamp": datetime.utcnow().isoformat()
